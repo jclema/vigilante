@@ -1,53 +1,289 @@
 # Vigilante
 
-Sistema piloto para detectar, investigar y gestionar posibles suplantaciones de
-concesionarios Yamaha en Google Maps.
+Vigilante es un piloto para detectar suplantacion de concesionarios Yamaha en Google Maps, consolidar evidencia y ayudar a un humano a decidir si un caso debe escalarse, archivarse o reportarse.
 
-Vigilante combina monitoreo público, eventos de Google Business Profile,
-análisis de evidencia, gestión de casos y asistencia para reportes. El objetivo
-operativo es reducir el tiempo entre la aparición de un perfil o contenido
-sospechoso y una decisión humana respaldada por evidencia.
+No es un sistema autonomo de enforcement. Hoy es un producto de operaciones asistidas con foco en:
 
-> Estado: piloto funcional. Sirve para demos, validación de flujos y desarrollo
-> local. Todavía no debe tratarse como un sistema autónomo de protección en
-> producción.
+- deteccion publica de puntos clonados o sospechosos
+- analisis de evidencia y construccion de expedientes
+- gestion operativa por red, concesionario y sede
+- preparacion de reportes con aprobacion humana
 
-## Qué funciona hoy
+## Estado real del proyecto
 
-| Capacidad | Estado | Alcance actual |
+El producto ya paso de ser un prototipo generico a un piloto operativo con UI, casos, expediente, mapa territorial, jerarquia de red y rutas de integracion. Lo importante es esto:
+
+- el monitoreo publico de puntos clonados si funciona
+- la gestion de casos, expediente y operacion manual si funciona
+- la estructura organizacional nueva ya quedo modelada
+- la integracion formal con Google Business Profile quedo implementada en software
+- el acceso real a `customer media` de GBP no quedo habilitado por Google
+- la captura automatizada por navegador contra Google Maps no es confiable en Cloud Run
+
+En corto: Vigilante ya sirve para operar el piloto y validar flujos humanos reales, pero todavia no tiene una fuente estable y oficial para fotos GBP.
+
+## Resumen ejecutivo
+
+### Lo que si logramos
+
+1. Construimos un dashboard operativo usable.
+2. Rehicimos la UX de login, dashboard, case detail y settings.
+3. Simplificamos cards, copies y jerarquia visual para que el sistema se sienta mas liviano.
+4. Modelamos la jerarquia correcta de red:
+   - Vigilante plataforma
+   - Vista global de redes
+   - Yamaha Red Oficial
+   - Concesionarios
+   - Sedes
+5. Ajustamos whitelist, organizaciones y sedes reales para la red Yamaha.
+6. Corregimos la logica para que los casos y alertas se agreguen a la organizacion correcta.
+7. Reparamos el endpoint de escaneo publico para aceptar trafico confiable de Cloud Scheduler.
+8. Dejamos operativa la ruta formal de `customer media` por GBP, con UI y mensajes de bloqueo claros.
+9. Reinsertamos evidencia visual en expediente para casos de foto manipulada.
+10. Dejamos documentado que browser capture es experimental y no debe tratarse como evidencia oficial.
+
+### Lo que no funciono
+
+1. Google bloqueo o degrado repetidamente la captura automatizada por navegador.
+2. El proyecto no obtuvo aprobacion de Google para acceso real a GBP API con cuota operativa.
+3. Sin esa aprobacion, `Requests per minute` para Business Information API quedo en `0`.
+4. Sin cuota aprobada, no podemos leer `customer media` oficial aunque la integracion tecnica este lista.
+
+### Por que no funciono
+
+No fue un problema principal de codigo. El bloqueo fue externo en dos capas:
+
+1. Google Maps detecta y limita trafico automatizado, incluso endureciendo la navegacion con redirecciones a `google.com/sorry`.
+2. Google rechazo la solicitud de acceso GBP porque la cuenta o proyecto no pasaron sus chequeos internos de calidad.
+
+## Contexto del producto
+
+El problema que resuelve Vigilante es operativo, no solo tecnico.
+
+Los concesionarios oficiales pueden ser afectados por:
+
+- perfiles clonados
+- sedes falsas
+- fotos manipuladas
+- phishing dentro de Google Maps
+
+El trabajo manual para detectar, comparar, documentar y hacer seguimiento consume tiempo, se dispersa entre personas y deja poca trazabilidad. Vigilante nace para concentrar:
+
+- monitoreo
+- evidencia
+- scoring
+- decision humana
+- seguimiento
+
+## Proceso de desarrollo del producto
+
+Este ha sido el recorrido real del piloto.
+
+### Fase 1. Base del sistema
+
+Se construyo la app FastAPI con:
+
+- autenticacion
+- organizaciones y roles
+- dashboard server-rendered
+- casos, evidencia y timeline
+- servicios Scout, Forensic y Reporter
+
+### Fase 2. Operacion y UX
+
+Se hizo una pasada profunda de UI y UX para volver la app mas directa:
+
+- login mas claro y moderno
+- dashboard con mapas y tarjetas mas operacionales
+- expedientes mas legibles
+- settings por vista activa mas ordenado
+- mensajes menos narrativos y mas accionables
+
+### Fase 3. Jerarquia real de la red
+
+Se rehizo la arquitectura operativa alrededor de:
+
+- una sola Yamaha Red Oficial
+- varios concesionarios dentro de esa red
+- una o mas sedes por concesionario
+
+Esto obligo a:
+
+- migrar asociaciones de casos y alertas
+- rehacer dropdowns y vistas activas
+- actualizar whitelist y concesionarios reales
+- corregir agregaciones para perfiles protegidos, alertas y comando
+
+### Fase 4. Deteccion publica
+
+Se estabilizo el scan publico para posibles clonaciones y perfiles sospechosos.
+
+Tambien se corrigio el endpoint `/api/scans/run` para que acepte ejecuciones confiables desde Cloud Scheduler, con sus headers reales.
+
+Esto dejo funcional la parte mas importante del piloto hoy: barrido publico y creacion de casos.
+
+### Fase 5. Fotos y evidencia
+
+Intentamos dos caminos en paralelo:
+
+#### Camino A. Captura publica con navegador
+
+Se construyo un flujo experimental con Playwright para:
+
+- abrir perfiles oficiales
+- navegar a fotos
+- tomar captura
+- ingestar evidencia
+
+Se mejoro con:
+
+- `storage_state`
+- variantes con Chrome local y CDP
+- filtros por perfil
+- validacion de aterrizaje correcto
+
+Resultado:
+
+- sigue siendo experimental
+- en Cloud Run Google lo bloquea o lo manda a landing equivocada
+- no se puede tomar como fuente estable
+
+#### Camino B. Integracion formal GBP
+
+Se implemento la ruta formal para leer `customer media` oficial:
+
+- OAuth por organizacion
+- conexion de cuentas GBP
+- binding de locations
+- backfill manual desde settings
+- mensajes claros de estado y bloqueo
+
+Resultado:
+
+- la integracion tecnica quedo lista
+- la plataforma muestra el bloqueo correctamente
+- Google no habilito el acceso real
+
+## Lo que funciona hoy
+
+| Capacidad | Estado | Comentario |
 |---|---|---|
-| Dashboard ejecutivo y operativo | Funcional | Vistas de red, organizaciones, perfiles, casos, evidencia y actividad |
-| Gestión de usuarios y organizaciones | Funcional | Roles, sesiones, selección de organización e invitaciones |
-| Scout | Funcional | Consolida candidatos obtenidos de búsquedas públicas y crea casos |
-| Forensic | Funcional | Evalúa nombre, teléfono, ubicación, texto extraído y señales de riesgo |
-| Reporter | Funcional | Genera paquetes de evidencia, alertas y borradores de reporte |
-| Google Places | Parcial | Usa la API real cuando existe `GOOGLE_MAPS_API_KEY`; sin ella usa datos demo |
-| Google Business Profile | Parcial | Incluye OAuth, conexión por organización e ingesta de customer media; requiere acceso real a las cuentas GBP |
-| Persistencia | Parcial | Memoria para demo y adaptador Firestore para Google Cloud |
-| Evidencia y OCR | Parcial | Almacenamiento local o GCS y soporte opcional para Google Vision |
-| Notificaciones | Parcial | Webhook y SMTP configurables |
-| Browser enforcement | Experimental | Prepara o ejecuta flujos asistidos; no debe operar sin revisión humana |
-| Captura pública con Playwright | Experimental | Google puede bloquear el tráfico o redirigirlo a `google.com/sorry` |
-| Pruebas y CI | Funcional | 75 pruebas, Ruff, build del paquete, smoke test y builds Docker |
+| Login, roles y sesiones | Funcional | Demo y flujo Google conectados |
+| Dashboard operativo | Funcional | Vistas de plataforma, red y concesionario |
+| Territory map | Funcional | Enfoque operativo en alertas |
+| Gestion de casos | Funcional | Triage, expediente, timeline y operacion |
+| Deteccion publica de clonados | Funcional | Ruta mas confiable del producto hoy |
+| Expediente de foto manipulada | Funcional | Con evidencia visual recuperada |
+| Jerarquia red -> concesionario -> sede | Funcional | Ajustada a estructura real Yamaha |
+| Browser enforcement guiado | Funcional con limites | Humano-in-the-loop |
+| Ingesta formal GBP en codigo | Funcional en software | Bloqueada externamente por Google |
+| Captura publica de fotos con Playwright | Experimental | No confiable en Cloud Run |
 
-## Flujo actual
+## Lo que no funciona hoy
 
-1. Cargar concesionarios autorizados y perfiles monitoreados.
-2. Buscar candidatos públicos alrededor de las zonas objetivo.
-3. Recibir eventos GBP cuando una organización ha autorizado el acceso.
-4. Analizar identidad, teléfonos, ubicación, texto e imágenes.
-5. Consolidar señales en casos con nivel de riesgo y evidencia.
-6. Preparar alertas y paquetes de reporte.
-7. Mantener una decisión humana antes de cualquier acción irreversible.
+| Tema | Estado | Razon |
+|---|---|---|
+| Customer media oficial GBP | Bloqueado | Google rechazo acceso del proyecto |
+| Cuota operativa Business Information API | Bloqueada | `Requests per minute = 0` |
+| Scraper de fotos por navegador en cloud | Inestable | Antibot y redireccion a `google.com/sorry` |
+| Cobertura automatica de fotos oficiales | No disponible | Depende de alguno de los dos puntos anteriores |
 
-## Inicio rápido
+## Punto exacto donde estamos
+
+Hoy Vigilante esta en un punto intermedio sano:
+
+- el producto ya tiene forma operativa real
+- el flujo de casos ya es usable
+- la red y los concesionarios ya quedaron modelados
+- el monitoreo publico ya genera valor
+- el gran bloqueo pendiente es la fuente oficial o confiable de fotos GBP
+
+No estamos bloqueados para seguir mejorando producto. Si estamos bloqueados para validar el modulo de fotos oficiales como capacidad productiva real.
+
+## Que debe resolverse
+
+### P0. Resolver la fuente de fotos oficiales
+
+Hay dos caminos:
+
+1. Reaplicar correctamente a GBP API y lograr aprobacion real de Google.
+2. Definir un fallback humano o semiautomatico para fotos mientras llega esa aprobacion.
+
+Mi lectura hoy es clara: este es el cuello de botella principal del proyecto.
+
+### P0. Confirmar criterio operativo de denuncia
+
+Ya avanzamos hacia un modelo donde el sistema prepara y el humano decide. Falta cerrar de forma estable:
+
+- umbral real de alta certeza
+- que evidencia minima exige una denuncia
+- como documentar evidencia y seguimiento posterior
+- cuando un caso se archiva como falso positivo
+
+### P0. Medir precision con casos reales
+
+Hace falta dataset y rutina operativa para medir:
+
+- precision de alertas
+- falsos positivos
+- tiempo de triage
+- tiempo a decision
+- valor real por concesionario
+
+### P1. Persistencia y operacion productiva
+
+Aunque ya existe soporte para Firestore y GCS, falta endurecer:
+
+- retencion de evidencia
+- observabilidad
+- auditoria
+- runbooks
+- recuperacion ante fallos externos
+
+## Plan actual recomendado
+
+### Frente 1. Producto
+
+Seguir mejorando lo que ya genera valor sin depender de Google:
+
+1. dashboard operativo
+2. case detail
+3. comando por concesionario
+4. filtros, historicos y trazabilidad
+5. evidencia y seguimiento manual
+
+### Frente 2. GBP oficial
+
+No seguir invirtiendo horas en hacks tecnicos hasta resolver aprobacion.
+
+Lo correcto ahora es:
+
+1. corregir lo necesario en website, negocio y perfil para cumplir criterios de Google
+2. volver a aplicar
+3. esperar aprobacion de cuota real
+4. reconectar y volver a probar `customer media`
+
+### Frente 3. Fallback operativo
+
+Si el negocio necesita validar fotos antes de esa aprobacion, conviene definir un flujo manual controlado o semiasistido, no seguir apostandole por ahora a un scraper cloud frágil.
+
+## Credenciales demo
+
+Las cuentas demo base viven en `app/services/demo_data.py`.
+
+- `operator@vigilante.local` / `change-me`
+- `yamaha@vigilante.local` / `yamaha-demo`
+- `bello@motoblu.local` / `dealer-demo`
+- `asesor.bello@motoblu.local` / `dealer-demo`
+
+## Inicio rapido
 
 Requisitos:
 
-- Python 3.11 o superior.
-- `make`.
-- `curl` para el smoke test.
-- Docker solo para validar o ejecutar contenedores.
+- Python 3.11 o superior
+- `make`
+- `curl` para smoke test
+- Docker solo si vas a validar contenedores
 
 ```bash
 git clone <repository-url>
@@ -56,55 +292,45 @@ make setup
 make run
 ```
 
-Abrir `http://127.0.0.1:8000`.
-
-Sin credenciales externas, la aplicación carga datos demo y usa almacenamiento
-en memoria. Las cuentas demo están definidas en `app/services/demo_data.py` y
-son exclusivamente para desarrollo.
+Abrir [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## Comandos canónicos
 
 ```bash
-make setup       # crea .venv e instala aplicación y herramientas
-make run         # inicia FastAPI con recarga local
-make test        # ejecuta pytest
+make setup       # crea .venv e instala app y herramientas
+make run         # inicia FastAPI local
+make test        # ejecuta pruebas
 make lint        # ejecuta Ruff
-make format      # formatea y corrige hallazgos seguros
-make build       # construye wheel y source distribution
-make smoke       # inicia la aplicación y prueba /login
-make check       # lint, pruebas, build y compilación
+make format      # formatea Python
+make build       # construye wheel y sdist
+make smoke       # prueba que /login responda
+make check       # lint, pruebas, build y compile checks
 ```
-
-El mapa completo para Codex y otros agentes está en
-[`AGENTS.md`](AGENTS.md).
 
 ## Arquitectura del repositorio
 
 ```text
 app/
   agents/        Scout, Forensic y Reporter
-  services/      autenticación, integraciones, evidencia y operaciones
+  services/      autenticacion, integraciones, evidencia y operaciones
   templates/     dashboard server-rendered
   static/        estilos y assets
   main.py        rutas FastAPI y wiring
   models.py      modelo de dominio
   store.py       repositorios en memoria y Firestore
-docs/            guías operativas, matrices y planes
-infra/           Terraform y políticas de infraestructura
+docs/            guias operativas, matrices y planes
+infra/           Terraform e infraestructura
 scripts/         herramientas operativas reutilizables
 tests/           pruebas unitarias y de API
 ```
 
-## Configuración
-
-Copiar la plantilla y reemplazar solo los valores necesarios para el modo que
-se va a ejecutar:
+## Configuracion
 
 ```bash
 cp .env.example .env
 ```
 
-Variables mínimas para demo:
+Variables minimas para demo:
 
 ```dotenv
 APP_ENV=development
@@ -113,7 +339,7 @@ SEED_DEMO_DATA=true
 SESSION_SECRET=<valor-local-aleatorio>
 ```
 
-Integraciones externas relevantes:
+Integraciones externas importantes:
 
 - `GOOGLE_MAPS_API_KEY`
 - `GOOGLE_OAUTH_CLIENT_ID`
@@ -123,114 +349,29 @@ Integraciones externas relevantes:
 - `GOOGLE_CLOUD_PROJECT`
 - `EVIDENCE_BUCKET_NAME`
 - `ALERT_WEBHOOK_URL`
-- configuración SMTP
+- SMTP si aplica
 
-No guardar credenciales, service accounts ni estados de navegador en Git.
+Nunca guardar credenciales, service accounts, evidencia real ni `storage_state` de navegador en Git.
 
-## Lo que falta para que sea verdaderamente útil
+## Documentacion clave
 
-### P0. Probar valor operativo con datos reales
-
-El siguiente hito no es agregar más agentes. Es cerrar un flujo real de punta a
-punta con una organización y un conjunto pequeño de sedes.
-
-- Conseguir acceso GBP de una organización piloto.
-- Completar la matriz de perfiles, cuentas y responsables.
-- Conectar Places, GBP, Firestore, GCS y notificaciones en un entorno de prueba.
-- Ejecutar un scan real y confirmar que un analista puede distinguir un falso
-  positivo de una amenaza.
-- Generar un expediente que pueda revisarse y reportarse sin reconstruir
-  evidencia manualmente.
-
-Criterio de salida: al menos un caso real o controlado pasa desde detección
-hasta decisión humana con evidencia, trazabilidad y tiempos medidos.
-
-### P0. Definir el contrato de detección
-
-Hoy existen reglas y scoring, pero falta convertirlos en un contrato operativo:
-
-- Qué constituye perfil oficial, sospechoso, watchlist y suplantación confirmada.
-- Qué señales son obligatorias antes de escalar.
-- Umbrales de riesgo y responsables de aprobar cambios.
-- Tratamiento de falsos positivos y mecanismo de apelación.
-- Dataset etiquetado para medir precisión y recall.
-
-Criterio de salida: los mismos inputs producen decisiones explicables y
-reproducibles, con métricas conocidas.
-
-### P0. Seguridad y operación mínima
-
-- Rechazar secretos por defecto fuera de desarrollo.
-- Completar `.env.example` con todas las variables soportadas.
-- Validar autenticación de webhooks y llamadas de Cloud Scheduler.
-- Definir retención, acceso y cadena de custodia para evidencia.
-- Añadir rate limiting, headers de seguridad y auditoría de acciones sensibles.
-- Documentar backup, restauración, rollback y respuesta a incidentes.
-
-Criterio de salida: el piloto puede almacenar evidencia real sin depender de
-credenciales demo ni controles implícitos.
-
-### P1. Observabilidad y recuperación
-
-- Logs estructurados con organization ID, case ID, scan ID y correlation ID.
-- Métricas de cobertura, latencia, errores, casos creados y falsos positivos.
-- Estado visible de Places, GBP, OCR, storage y notificaciones.
-- Reintentos idempotentes y dead-letter handling para eventos fallidos.
-- Runbooks con comandos exactos para diagnosticar y recuperar cada integración.
-
-Criterio de salida: un operador puede detectar y explicar una falla sin leer el
-código ni repetir el flujo a ciegas.
-
-### P1. Validación de producto
-
-Medir durante el piloto:
-
-- Tiempo medio desde detección hasta triage.
-- Tiempo desde triage hasta reporte.
-- Precisión de casos escalados.
-- Cobertura de sedes y perfiles oficiales.
-- Incidentes evitados o tiempo operativo ahorrado.
-- Costo por sede monitoreada.
-
-Sin estas métricas, Vigilante puede ser técnicamente interesante pero no
-demostrar valor comercial.
-
-### P2. Automatización segura
-
-Solo después de validar precisión y operación:
-
-- Automatizar acciones reversibles de bajo riesgo.
-- Mantener aprobación humana para reportes o cambios externos.
-- Registrar evidencia antes y después de cada acción.
-- Incorporar browser automation como fallback, no como fuente principal.
-- Añadir cleanup periódico de deuda, documentación y reglas obsoletas.
-
-## Riesgos conocidos
-
-- Google Maps puede bloquear automatización de navegador.
-- El acceso GBP depende de permisos y estructura de cuentas de cada concesionario.
-- Los datos demo no representan la distribución real de fraude.
-- La memoria local no es persistencia productiva.
-- Un score alto no equivale por sí solo a fraude confirmado.
-- Automatizar reportes incorrectos puede afectar perfiles legítimos.
-
-## Documentación
-
-- [`docs/google-cloud-pilot.md`](docs/google-cloud-pilot.md): despliegue piloto.
+- [`AGENTS.md`](AGENTS.md): mapa rapido del repo para agentes.
+- [`docs/google-cloud-pilot.md`](docs/google-cloud-pilot.md): checklist de despliegue del piloto.
 - [`docs/gbp-access-matrix-guide.md`](docs/gbp-access-matrix-guide.md): levantamiento de acceso GBP.
-- [`docs/experimental-browser-capture.md`](docs/experimental-browser-capture.md): límites de captura pública.
-- [`docs/plans/active/codex-harness-v1.md`](docs/plans/active/codex-harness-v1.md): arnés del repositorio para Codex.
-- [`Agente IA Anti-Phishing Google Maps.md`](Agente%20IA%20Anti-Phishing%20Google%20Maps.md): investigación y propuesta original.
+- [`docs/experimental-browser-capture.md`](docs/experimental-browser-capture.md): limites y uso del scraper experimental.
+- [`Agente IA Anti-Phishing Google Maps.md`](Agente%20IA%20Anti-Phishing%20Google%20Maps.md): investigacion y propuesta original.
 
-## Regla de contribución
+## Regla de entrega
 
-Antes de entregar un cambio:
+Antes de cerrar cambios:
 
 ```bash
 make check
 make smoke
 ```
 
-Los cambios que afecten scoring, autorizaciones, persistencia, retención o
-acciones externas deben incluir criterios de aceptación, pruebas y plan de
-rollback.
+Si un cambio toca scoring, autorizaciones, persistencia, retencion o acciones externas, debe venir con:
+
+- pruebas
+- criterio de aceptacion
+- rollback claro
