@@ -1,0 +1,2 @@
+"""Vigilante application package."""
+

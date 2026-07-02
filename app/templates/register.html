@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<main id="main-content" class="auth-shell" tabindex="-1">
+  <section class="auth-card">
+    <div class="auth-copy">
+      <span class="panel-kicker">Registro</span>
+      <h1>Crea tu organización.</h1>
+      <p>Empieza con un admin y luego conecta GBP, equipo y alertas.</p>
+    </div>
+    <form method="post" action="/auth/register" class="auth-form">
+      <label>
+        <span>Nombre completo</span>
+        <input type="text" name="full_name" required />
+      </label>
+      <label>
+        <span>Correo</span>
+        <input type="email" name="email" required />
+      </label>
+      <label>
+        <span>Contraseña</span>
+        <input type="password" name="password" required />
+      </label>
+      <label>
+        <span>Nombre de la organización</span>
+        <input type="text" name="organization_name" required />
+      </label>
+      <button type="submit">Crear organización</button>
+    </form>
+    <div class="auth-links">
+      <a href="/login">Ya tengo cuenta</a>
+    </div>
+  </section>
+</main>
+{% endblock %}

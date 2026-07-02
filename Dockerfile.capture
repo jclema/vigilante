@@ -1,0 +1,19 @@
+FROM mcr.microsoft.com/playwright/python:v1.52.0-noble
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY app ./app
+COPY scripts ./scripts
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir ".[capture]"
+
+ENV STORAGE_BACKEND=firestore
+ENV GOOGLE_CLOUD_PROJECT=vigilante-pilot
+ENV TARGETS_CSV=/app/scripts/experimental_browser_capture_targets.csv
+
+CMD ["sh", "-c", "PYTHONPATH=. python3 scripts/capture_public_review_media.py ${TARGETS_CSV}"]

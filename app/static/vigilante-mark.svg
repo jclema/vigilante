@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="vigilanteBg" x1="86" y1="92" x2="432" y2="436" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#90A2D6"/>
+      <stop offset="1" stop-color="#3E59A3"/>
+    </linearGradient>
+    <linearGradient id="vigilanteMid" x1="246" y1="190" x2="246" y2="356" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C8C8F0"/>
+      <stop offset="1" stop-color="#A9A7DD"/>
+    </linearGradient>
+    <linearGradient id="vigilanteRight" x1="324" y1="190" x2="324" y2="356" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AA8BE6"/>
+      <stop offset="1" stop-color="#8F79D8"/>
+    </linearGradient>
+  </defs>
+  <rect x="86" y="92" width="340" height="340" rx="88" fill="url(#vigilanteBg)"/>
+  <path d="M162 232L218 164V302L162 370V232Z" fill="#F6F4F2"/>
+  <path d="M218 164L274 232V370L218 302V164Z" fill="url(#vigilanteMid)"/>
+  <path d="M274 232L330 164V302L274 370V232Z" fill="#F8F0F0"/>
+  <path d="M330 164L386 232V370L330 302V164Z" fill="url(#vigilanteRight)"/>
+</svg>

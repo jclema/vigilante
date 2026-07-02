@@ -1,0 +1,11 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.capture
+      - -t
+      - us-central1-docker.pkg.dev/vigilante-pilot/cloud-run-source-deploy/vigilante-browser-capture:latest
+      - .
+images:
+  - us-central1-docker.pkg.dev/vigilante-pilot/cloud-run-source-deploy/vigilante-browser-capture:latest

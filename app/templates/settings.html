@@ -1,0 +1,936 @@
+{% extends "base.html" %}
+{% block content %}
+{% set selected_org = namespace(item=None) %}
+{% for organization in organizations %}
+  {% if organization.id == selected_organization_id %}
+    {% set selected_org.item = organization %}
+  {% endif %}
+{% endfor %}
+{% set selected_memberships = memberships[selected_org.item.id] if selected_org.item and selected_org.item.id in memberships else [] %}
+{% set selected_connections_count = connections|length if selected_org.item else 0 %}
+{% set selected_notifications_count = notifications|length if selected_org.item else 0 %}
+{% set can_manage_selected_org = selected_org.item and (current_actor.can_manage_platform or current_actor.can_manage_organization(selected_org.item.id)) %}
+{% set selected_profiles_count = profiles|length if selected_org.item else 0 %}
+{% set view_kind = "global" %}
+{% if selected_org.item %}
+  {% set view_kind = selected_org.item.organization_type.value %}
+{% endif %}
+{% set org_counts = namespace(dealer=0, network=0, platform=0, healthy=0, attention=0) %}
+{% for organization in organizations %}
+  {% if organization.organization_type.value == "dealer" %}
+    {% set org_counts.dealer = org_counts.dealer + 1 %}
+  {% elif organization.organization_type.value == "network" %}
+    {% set org_counts.network = org_counts.network + 1 %}
+  {% elif organization.organization_type.value == "platform" %}
+    {% set org_counts.platform = org_counts.platform + 1 %}
+  {% endif %}
+  {% if organization_health[organization.id].tone == "healthy" %}
+    {% set org_counts.healthy = org_counts.healthy + 1 %}
+  {% else %}
+    {% set org_counts.attention = org_counts.attention + 1 %}
+  {% endif %}
+{% endfor %}
+{% set connection_summary = namespace(connected=0, pending=0, error=0, active=0) %}
+{% for connection in connections %}
+  {% if connection.status.value == "connected" %}
+    {% set connection_summary.connected = connection_summary.connected + 1 %}
+  {% elif connection.status.value == "pending" %}
+    {% set connection_summary.pending = connection_summary.pending + 1 %}
+  {% elif connection.status.value == "error" %}
+    {% set connection_summary.error = connection_summary.error + 1 %}
+  {% endif %}
+  {% if connection.status.value != "disconnected" %}
+    {% set connection_summary.active = connection_summary.active + 1 %}
+  {% endif %}
+{% endfor %}
+{% set location_summary = namespace(total=0, bound=0) %}
+{% for item in connection_location_options %}
+  {% for binding in item.bindings %}
+    {% set location_summary.total = location_summary.total + 1 %}
+    {% if binding.selected_location_value %}
+      {% set location_summary.bound = location_summary.bound + 1 %}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+<main id="main-content" class="settings-shell" tabindex="-1">
+  {% if settings_notice %}
+  <section class="settings-notice settings-notice--{{ settings_notice.tone }}">
+    <div>
+      <strong>{{ settings_notice.title }}</strong>
+      <span>{{ settings_notice.message }}</span>
+    </div>
+  </section>
+  {% if settings_notice_password %}
+  <section class="settings-credential-card">
+    <div>
+      <span class="panel-kicker">Acceso temporal</span>
+      <h2>Comparte estas credenciales con el aliado por un canal seguro.</h2>
+      <p>
+        El usuario <strong>{{ settings_notice_detail }}</strong> ya quedó agregado a la organización. Esta contraseña temporal sirve para entrar hoy mismo y conectar GBP.
+      </p>
+    </div>
+    <div class="settings-credential-secret">
+      <span>Contraseña temporal</span>
+      <strong>{{ settings_notice_password }}</strong>
+    </div>
+  </section>
+  {% endif %}
+  {% endif %}
+  <section class="settings-hero settings-hero--refined">
+    <div class="settings-hero-copy">
+      <div class="settings-hero-brand">
+        <img src="/static/vigilante-mark.svg" alt="Logo Vigilante" class="settings-hero-mark" />
+        <div>
+          <span class="panel-kicker">Configuración</span>
+          <h1>
+            {% if view_kind == "global" %}
+            Red completa y prioridades.
+            {% elif view_kind == "platform" %}
+            Operación de plataforma.
+            {% elif view_kind == "network" %}
+            Gobierno de red Yamaha.
+            {% else %}
+            Concesionario activo y flujo GBP.
+            {% endif %}
+          </h1>
+        </div>
+      </div>
+      <p>
+        {% if view_kind == "global" %}
+        Detecta qué organización necesita atención y entra al contexto correcto.
+        {% elif view_kind == "platform" %}
+        Administra estructura, accesos y salto operativo hacia la red.
+        {% elif view_kind == "network" %}
+        Coordina cobertura, seguimiento y prioridad entre concesionarios.
+        {% else %}
+        Gestiona equipo, conexión oficial y alertas del concesionario.
+        {% endif %}
+      </p>
+    </div>
+    <div class="settings-hero-side">
+      <form method="post" action="/settings/organization-selection" class="settings-switcher settings-switcher--hero">
+        <label>
+          <span>Vista activa</span>
+          <select name="organization_id" data-settings-view-select>
+            {% for option in settings_view_options %}
+            <option value="{{ option.id }}" {% if (option.id == "__network__" and not selected_organization_id) or selected_organization_id == option.id %}selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="settings-switcher-submit">Cambiar vista</button>
+      </form>
+      <div class="settings-hero-metrics">
+        <article>
+          <strong>{% if view_kind == "dealer" %}{{ selected_dealer_rows|length }}{% elif view_kind == "network" %}{{ network_summary.dealers }}{% elif view_kind == "platform" %}{{ org_counts.platform }}{% else %}{{ organizations|length }}{% endif %}</strong>
+          <span>{% if view_kind == "dealer" %}sedes activas{% elif view_kind == "network" %}concesionarios{% elif view_kind == "platform" %}nodos plataforma{% else %}organizaciones visibles{% endif %}</span>
+        </article>
+        <article>
+          <strong>{% if view_kind == "dealer" %}{{ connection_summary.connected }}{% elif view_kind == "network" %}{{ network_summary.branches }}{% elif view_kind == "platform" %}{{ organizations|length }}{% else %}{{ org_counts.dealer }}{% endif %}</strong>
+          <span>{% if view_kind == "dealer" %}GBP activas{% elif view_kind == "network" %}sedes monitoreadas{% elif view_kind == "platform" %}organizaciones totales{% else %}concesionarios{% endif %}</span>
+        </article>
+        <article>
+          <strong>{% if view_kind == "dealer" %}{{ location_summary.bound }}/{{ location_summary.total }}{% elif view_kind == "network" %}{{ network_summary.connected_orgs }}{% elif view_kind == "platform" %}{{ org_counts.healthy }}{% else %}{{ org_counts.attention }}{% endif %}</strong>
+          <span>{% if view_kind == "dealer" %}locations vinculadas{% elif view_kind == "network" %}con GBP activa{% elif view_kind == "platform" %}organizaciones listas{% else %}organizaciones con atención{% endif %}</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="settings-overview-grid">
+    <aside class="settings-organization-rail {% if view_kind in ['network', 'dealer'] %}settings-organization-rail--network{% endif %}">
+      {% if view_kind not in ["network", "dealer"] %}
+      <div class="settings-rail-head">
+        <span class="panel-kicker">Organizaciones</span>
+        <h2>Vista actual</h2>
+      </div>
+      <div class="settings-organization-list">
+        {% if current_actor.can_view_network %}
+        <form method="post" action="/settings/organization-selection" class="organization-chip-form">
+          <input type="hidden" name="organization_id" value="" />
+          <button type="submit" class="organization-chip-card {% if not selected_organization_id %}is-selected{% endif %}">
+            <div>
+              <strong>Vista global</strong>
+              <span>Red Yamaha completa</span>
+            </div>
+            <span class="organization-health-badge organization-health-badge--network">Red</span>
+            {% if not selected_organization_id %}
+            <small>En foco</small>
+            {% endif %}
+          </button>
+        </form>
+        {% endif %}
+        {% for organization in organizations %}
+        <form method="post" action="/settings/organization-selection" class="organization-chip-form">
+          <input type="hidden" name="organization_id" value="{{ organization.id }}" />
+          <button type="submit" class="organization-chip-card {% if selected_organization_id == organization.id %}is-selected{% endif %}">
+            <div>
+              <strong>{{ organization.name }}</strong>
+              <span>{{ organization_health[organization.id].summary }}</span>
+            </div>
+            <span class="organization-health-badge organization-health-badge--{{ organization_health[organization.id].tone }}">{{ organization_health[organization.id].label }}</span>
+            {% if selected_organization_id == organization.id %}
+            <small>En foco</small>
+            {% endif %}
+          </button>
+        </form>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if selected_org.item %}
+      <article class="settings-selection-card settings-selection-card--{{ view_kind }}">
+        <span class="panel-kicker">{% if view_kind == "platform" %}Operación de plataforma{% elif view_kind == "network" %}Red seleccionada{% else %}Organización seleccionada{% endif %}</span>
+        <h3>{{ selected_org.item.name }}</h3>
+        <p>{% if selected_org.item.organization_type.value == "dealer" %}Sedes, conexión oficial y alertas del concesionario.{% elif selected_org.item.organization_type.value == "network" %}Cobertura, coordinación y seguimiento.{% else %}Estructura, accesos y control operativo.{% endif %}</p>
+        <div class="settings-selection-stats">
+          <article>
+            <strong>{% if view_kind == "platform" %}{{ organizations|length }}{% elif view_kind == "network" %}{{ network_summary.dealers }}{% else %}{{ selected_dealer_rows|length }}{% endif %}</strong>
+            <span>{% if view_kind == "platform" %}organizaciones{% elif view_kind == "network" %}concesionarios{% else %}sedes{% endif %}</span>
+          </article>
+          <article>
+            <strong>{% if view_kind == "platform" %}{{ org_counts.dealer }}{% elif view_kind == "network" %}{{ network_summary.branches }}{% else %}{{ selected_connections_count }}{% endif %}</strong>
+            <span>{% if view_kind == "platform" %}concesionarios{% elif view_kind == "network" %}sedes{% else %}cuentas GBP{% endif %}</span>
+          </article>
+          <article>
+            <strong>{% if view_kind == "platform" %}{{ org_counts.attention }}{% elif view_kind == "network" %}{{ network_summary.connected_orgs }}{% else %}{{ selected_notifications_count }}{% endif %}</strong>
+            <span>{% if view_kind == "platform" %}con atención{% elif view_kind == "network" %}con GBP activa{% else %}destinos de alerta{% endif %}</span>
+          </article>
+        </div>
+        <div class="settings-health-inline">
+          <span class="organization-health-badge organization-health-badge--{{ organization_health[selected_org.item.id].tone }}">{{ organization_health[selected_org.item.id].label }}</span>
+          <p>{{ organization_health[selected_org.item.id].summary }}</p>
+        </div>
+        <div class="settings-next-step">
+          <strong>Ahora</strong>
+          <p>
+            {% if view_kind == "platform" %}
+            Crea una organización nueva o entra a una existente para operar detalle.
+            {% elif view_kind == "network" %}
+            Prioriza el concesionario con más sedes o sin GBP activa.
+            {% elif location_summary.total and location_summary.bound < location_summary.total %}
+            Termina de vincular las locations oficiales que faltan.
+            {% elif selected_connections_count == 0 %}
+            Conecta la primera cuenta GBP.
+            {% elif selected_notifications_count == 0 %}
+            Agrega un correo receptor.
+            {% elif selected_memberships|length < 2 %}
+            Invita a otra persona.
+            {% else %}
+            La base está lista.
+            {% endif %}
+          </p>
+        </div>
+      </article>
+      {% else %}
+      <article class="settings-selection-card settings-selection-card--global">
+        <span class="panel-kicker">Vista global</span>
+        <h3>La red completa está en foco.</h3>
+        <p>Usa esta vista para priorizar y luego entrar al contexto correcto.</p>
+        <div class="settings-selection-stats">
+          <article>
+            <strong>{{ org_counts.dealer }}</strong>
+            <span>concesionarios</span>
+          </article>
+          <article>
+            <strong>{{ org_counts.healthy }}</strong>
+            <span>listas</span>
+          </article>
+          <article>
+            <strong>{{ org_counts.attention }}</strong>
+            <span>con atención</span>
+          </article>
+        </div>
+      </article>
+      {% endif %}
+    </aside>
+
+    <section class="settings-focus-stage">
+      {% if current_actor.can_manage_platform and view_kind == "platform" %}
+      <article class="settings-panel settings-panel--action">
+        <div class="panel-kicker">Alta de organización</div>
+        <div class="settings-panel-headline">
+          <h2>Crea una organización nueva.</h2>
+          <p>Dealer, red o plataforma.</p>
+        </div>
+        <form method="post" action="/settings/organizations" class="settings-form settings-form--inline">
+          <label>
+            <span>Nombre</span>
+            <input type="text" name="name" required />
+          </label>
+          <label>
+            <span>Tipo</span>
+            <select name="organization_type">
+              <option value="dealer">Concesionario</option>
+              <option value="network">Red Yamaha</option>
+              <option value="platform">Plataforma</option>
+            </select>
+          </label>
+          <button type="submit">Crear organización</button>
+        </form>
+      </article>
+      {% endif %}
+
+      {% if view_kind == "global" %}
+      <section class="settings-focus-grid settings-focus-grid--global">
+        <article class="settings-panel settings-panel--mode">
+          <span class="panel-kicker">Cobertura</span>
+          <h2>Empieza por las organizaciones con más fricción.</h2>
+          <p>Desde aquí comparas cobertura y prioridad antes de entrar a gestionar una organización.</p>
+          <div class="settings-mode-grid">
+            <article>
+              <strong>{{ org_counts.attention }}</strong>
+              <span>requieren atención</span>
+            </article>
+            <article>
+              <strong>{{ org_counts.dealer }}</strong>
+              <span>concesionarios en red</span>
+            </article>
+            <article>
+              <strong>{{ org_counts.network + org_counts.platform }}</strong>
+              <span>vistas de coordinación</span>
+            </article>
+          </div>
+        </article>
+        <article class="settings-panel settings-panel--mode settings-panel--global-summary">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Resumen de la red</span>
+              <h2>Organizaciones visibles</h2>
+            </div>
+            <small>{{ organizations|length }} en total</small>
+          </div>
+          <div class="settings-global-table-head" aria-hidden="true">
+            <span>Organización</span>
+            <span>Tipo</span>
+            <span>Estado</span>
+            <span>Acción</span>
+          </div>
+          <div class="settings-global-list">
+            {% for organization in organizations %}
+            <form method="post" action="/settings/organization-selection" class="settings-global-row-form">
+              <input type="hidden" name="organization_id" value="{{ organization.id }}" />
+              <button type="submit" class="settings-global-row">
+                <div class="settings-global-row-copy">
+                  <strong>{{ organization.name }}</strong>
+                  <span>{{ organization_health[organization.id].summary }}</span>
+                </div>
+                <span class="settings-global-row-type">
+                  {% if organization.organization_type.value == "dealer" %}
+                  Concesionario
+                  {% elif organization.organization_type.value == "network" %}
+                  Red
+                  {% else %}
+                  Plataforma
+                  {% endif %}
+                </span>
+                <span class="organization-health-badge organization-health-badge--{{ organization_health[organization.id].tone }}">{{ organization_health[organization.id].label }}</span>
+                <span class="settings-global-row-action">Abrir</span>
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+        </article>
+      </section>
+      {% elif selected_org.item %}
+      <section class="settings-focus-grid">
+        {% if view_kind == "dealer" %}
+        <article class="settings-panel settings-panel--dealer-sites">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Sedes</span>
+              <h2>{{ selected_dealer_rows|length }} sedes del concesionario</h2>
+            </div>
+            <small>Qué se vigila y cómo está conectado.</small>
+          </div>
+          <div class="settings-network-table-head settings-dealer-table-head" aria-hidden="true">
+            <span>Sede</span>
+            <span>Ciudad</span>
+            <span>Monitoreo</span>
+            <span>Telefono</span>
+          </div>
+          <div class="settings-network-list settings-dealer-list">
+            {% for row in selected_dealer_rows %}
+            <div class="settings-network-row settings-dealer-row">
+              <div class="settings-network-row-copy">
+                <strong>{{ row.dealer.name }}</strong>
+                <span>{{ row.dealer.address }}</span>
+              </div>
+              <span class="settings-network-row-coverage">{{ row.dealer.city }}</span>
+              <span class="settings-network-row-coverage">{{ row.coverage }}</span>
+              <span class="settings-network-row-coverage">{{ row.phone_summary }}</span>
+            </div>
+            {% else %}
+            <div class="settings-empty-card">Todavia no hay sedes configuradas para este concesionario.</div>
+            {% endfor %}
+          </div>
+        </article>
+        {% endif %}
+
+        {% if view_kind != "platform" and view_kind != "network" %}
+        <article class="settings-panel settings-panel--people">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Equipo</span>
+              <h2>{{ selected_memberships|length }} personas con acceso</h2>
+            </div>
+            <small>Quién administra y quién opera.</small>
+          </div>
+          <ul class="settings-list settings-list--people">
+            {% for row in selected_memberships %}
+            <li>
+              <div class="settings-list-primary">
+                <strong>{{ row.user.full_name if row.user else row.membership.user_id }}</strong>
+                <span>{{ row.user.email if row.user else '' }}</span>
+              </div>
+              <small>{{ row.membership.role.value | replace('_', ' ') | title }}</small>
+            </li>
+            {% else %}
+            <li class="settings-empty-card">Todavía no hay personas asociadas a esta organización. Invita a la primera para repartir operación y seguimiento.</li>
+            {% endfor %}
+          </ul>
+          {% if current_actor.can_manage_platform or current_actor.can_manage_organization(selected_org.item.id) %}
+          <details class="settings-disclosure" {% if selected_memberships|length < 2 %}open{% endif %}>
+            <summary>Invitar usuario</summary>
+            <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/invite" class="settings-form">
+              <div class="settings-form-heading">
+                <strong>Nuevo acceso</strong>
+                <span>Agrega acceso sin salir de aquí.</span>
+              </div>
+              <label>
+                <span>Nombre completo</span>
+                <input type="text" name="full_name" placeholder="Nombre completo" required />
+              </label>
+              <label>
+                <span>Correo</span>
+                <input type="email" name="email" placeholder="correo@empresa.com" required />
+              </label>
+              <label>
+                <span>Rol</span>
+                <select name="role">
+                  <option value="dealer_member">Miembro</option>
+                  <option value="dealer_admin">Admin concesionario</option>
+                </select>
+              </label>
+              <button type="submit">Invitar usuario</button>
+            </form>
+          </details>
+          {% endif %}
+        </article>
+        {% endif %}
+
+        {% if view_kind == "dealer" %}
+        <article class="settings-panel settings-panel--connections">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Onboarding GBP</span>
+              <h2>Conecta la fuente oficial</h2>
+            </div>
+            {% if can_manage_selected_org %}
+            <a class="hero-link" href="/api/organizations/{{ selected_org.item.id }}/gbp/start">Conectar con Google</a>
+            {% else %}
+            <small>Solo un admin autorizado puede conectar o desconectar GBP.</small>
+            {% endif %}
+          </div>
+          <div class="settings-step-statuses">
+            <article>
+              <strong>{{ connection_summary.active }}</strong>
+              <span>cuentas activas</span>
+            </article>
+            <article>
+              <strong>{{ selected_profiles_count }}</strong>
+              <span>perfiles vigilados</span>
+            </article>
+            <article>
+              <strong>{{ location_summary.bound }}/{{ location_summary.total }}</strong>
+              <span>locations vinculadas</span>
+            </article>
+          </div>
+          <div class="settings-onboarding-card settings-onboarding-card--compact">
+            <strong>Ruta rápida</strong>
+            <p>Conecta la cuenta, elige sedes reales y vincula cada una con su location oficial.</p>
+          </div>
+          <article class="settings-onboarding-card settings-onboarding-card--compact settings-onboarding-card--media">
+            <div class="settings-panel-topline">
+              <div>
+                <span class="panel-kicker">Fotos oficiales GBP</span>
+                <h3>Prueba formal sobre {{ selected_org.item.name }}</h3>
+              </div>
+              <small>{{ customer_media_summary.eligible_profiles|length }} sedes listas</small>
+            </div>
+            <div class="settings-step-statuses settings-step-statuses--media">
+              <article>
+                <strong>{{ customer_media_summary.eligible_profiles|length }}</strong>
+                <span>sedes elegibles</span>
+              </article>
+              <article>
+                <strong>{{ customer_media_summary.evidence_count }}</strong>
+                <span>fotos oficiales guardadas</span>
+              </article>
+              <article>
+                <strong>{{ customer_media_summary.case_count }}</strong>
+                <span>expedientes tocados</span>
+              </article>
+            </div>
+            {% if customer_media_summary.eligible_profiles %}
+            <div class="settings-media-profile-chips">
+              {% for profile in customer_media_summary.eligible_profiles %}
+              <span class="settings-media-profile-chip">{{ profile.name }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+            <p class="settings-media-note">
+              Lanza un backfill formal desde Google Business Profile para comprobar si las sedes ya conectadas están entregando customer media oficial.
+            </p>
+            {% if settings_notice and settings_notice.title == "Integración lista, acceso pendiente por Google" %}
+            <div class="settings-media-status">
+              <strong>Estado actual</strong>
+              <span>La integración formal ya está lista en Vigilante. El bloqueo restante es externo: Google aún no habilita customer media oficial para este proyecto.</span>
+              <small>Siguiente paso recomendado: registrar el case ID en “Seguimiento con Google” y reintentar el backfill cuando Google confirme la aprobación.</small>
+            </div>
+            {% endif %}
+            {% if can_manage_selected_org %}
+            <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/gbp/customer-media/backfill" class="settings-form settings-form--inline settings-form--media-backfill">
+              <label>
+                <span>Límite por sede</span>
+                <input type="number" name="limit" min="1" max="50" value="20" />
+              </label>
+              <button type="submit" {% if not customer_media_summary.eligible_profiles %}disabled{% endif %}>Sincronizar fotos oficiales ahora</button>
+            </form>
+            {% endif %}
+            {% if customer_media_summary.latest_job %}
+            <div class="settings-media-run">
+              <strong>Última sincronización</strong>
+              <span>{{ customer_media_summary.latest_job.job_status.value | replace('_', ' ') | title }} · {{ customer_media_summary.latest_job.started_at.strftime('%Y-%m-%d %H:%M') }}</span>
+              {% if customer_media_summary.latest_job.detail %}
+              <small>{{ customer_media_summary.latest_job.detail }}</small>
+              {% endif %}
+            </div>
+            {% endif %}
+          </article>
+          {% if can_manage_selected_org and selected_profiles_count == 0 and suggested_profiles %}
+          <details class="settings-disclosure settings-disclosure--soft" open>
+            <summary>Importar perfiles sugeridos</summary>
+            <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/profiles/import-suggestions" class="settings-form settings-form--suggestions">
+              <div class="settings-form-heading">
+                <strong>Paso 2. Perfiles sugeridos</strong>
+                <span>Importa solo las sedes oficiales que sí pertenecen a esta organización.</span>
+              </div>
+              <div class="settings-checkboxes">
+                {% for profile in suggested_profiles %}
+                <label class="settings-checkbox-card">
+                  <input type="checkbox" name="profile_ids" value="{{ profile.id }}" checked />
+                  <span>{{ profile.name }}</span>
+                </label>
+                {% endfor %}
+              </div>
+              <button type="submit">Importar perfiles sugeridos</button>
+            </form>
+          </details>
+          {% endif %}
+          <ul class="settings-list">
+            {% for connection in connections %}
+            <li class="settings-connection-item">
+              <div class="settings-list-primary">
+                <strong>{{ connection.provider_email or connection.provider_account_id }}</strong>
+                <span>
+                  {{ connection.selected_profile_ids|length }} perfiles asociados
+                  {% if connection.available_locations %}
+                  · {{ connection.available_locations|length }} locations detectadas
+                  {% endif %}
+                  {% if connection.last_error %}
+                  · {{ connection.last_error }}
+                  {% elif connection.last_sync_at %}
+                  · sincronizada recientemente
+                  {% endif %}
+                </span>
+              </div>
+              <small class="connection-state connection-state--{{ connection.status.value }}">
+                {% if connection.status.value == "connected" %}
+                Lista para monitorear
+                {% elif connection.status.value == "pending" %}
+                Falta completar activación
+                {% elif connection.status.value == "error" %}
+                Requiere revisión
+                {% else %}
+                Desconectada
+                {% endif %}
+              </small>
+            </li>
+            {% if can_manage_selected_org and connection.status.value != "disconnected" %}
+            <li class="settings-connection-actions">
+              <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/gbp/connections/{{ connection.id }}/locations/refresh">
+                <button type="submit" class="settings-secondary-button">Descubrir sedes reales</button>
+              </form>
+              <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/gbp/connections/{{ connection.id }}/disconnect">
+                <button type="submit" class="settings-secondary-button">Desconectar cuenta</button>
+              </form>
+            </li>
+            {% endif %}
+            {% else %}
+            <li class="settings-empty-card">Todavía no hay cuentas GBP conectadas para esta organización.</li>
+            {% endfor %}
+          </ul>
+          {% if can_manage_selected_org %}
+          {% for connection in connections if connection.status.value != "disconnected" %}
+          <details class="settings-disclosure" {% if not connection.selected_profile_ids %}open{% endif %}>
+            <summary>Asociar perfiles a {{ connection.provider_email or connection.provider_account_id }}</summary>
+            <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/gbp/connections/{{ connection.id }}/profiles" class="settings-form">
+              <div class="settings-form-heading">
+                <strong>Paso 2. Asociar perfiles</strong>
+                <span>Selecciona solo las sedes que realmente vas a monitorear.</span>
+              </div>
+              <div class="settings-checkboxes">
+                {% for profile in profiles %}
+                <label class="settings-checkbox-card">
+                  <input type="checkbox" name="profile_ids" value="{{ profile.id }}" {% if profile.id in connection.selected_profile_ids %}checked{% endif %}/>
+                  <span>{{ profile.name }}</span>
+                </label>
+                {% else %}
+                <div class="settings-empty-card">No hay perfiles disponibles todavía para asociar en esta organización.</div>
+                {% endfor %}
+              </div>
+              <button type="submit">Guardar perfiles conectados</button>
+            </form>
+          </details>
+          <details class="settings-disclosure settings-disclosure--support" {% if (connection.api_access_status or 'pending_google') != 'approved' %}open{% endif %}>
+            <summary>Seguimiento con Google</summary>
+            <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/gbp/connections/{{ connection.id }}/api-access" class="settings-form settings-form--support">
+              <div class="settings-form-heading">
+                <strong>Paso 4. Seguimiento con Google</strong>
+                <span>Registra el case ID y el estado del acceso oficial.</span>
+              </div>
+              <div class="settings-support-grid">
+                <label>
+                  <span>Case ID de Google</span>
+                  <input type="text" name="case_id" value="{{ connection.api_access_case_id or '' }}" placeholder="2-9803000040915" />
+                </label>
+                <label>
+                  <span>Estado del acceso oficial</span>
+                  <select name="access_status">
+                    <option value="pending_google" {% if (connection.api_access_status or 'pending_google') == 'pending_google' %}selected{% endif %}>Pendiente por Google</option>
+                    <option value="approved" {% if connection.api_access_status == 'approved' %}selected{% endif %}>Aprobado</option>
+                    <option value="not_requested" {% if connection.api_access_status == 'not_requested' %}selected{% endif %}>Aún no solicitado</option>
+                  </select>
+                </label>
+              </div>
+              <button type="submit">Guardar seguimiento</button>
+              {% if connection.api_access_case_id or connection.api_access_status == 'pending_google' %}
+              <div class="settings-support-note">
+                <strong>Cuando Google responda</strong>
+                <ol>
+                  <li>Confirmar que la solicitud del proyecto fue aprobada.</li>
+                  <li>Volver a intentar el backfill oficial sobre las sedes ya vinculadas.</li>
+                  <li>Revisar que entren fotos y que el pipeline cree o enriquezca casos.</li>
+                </ol>
+              </div>
+              {% endif %}
+            </form>
+          </details>
+          {% endfor %}
+          {% for item in connection_location_options %}
+          {% if item.connection.selected_profile_ids %}
+          <details class="settings-disclosure settings-disclosure--location" {% if location_summary.total == 0 or location_summary.bound < location_summary.total %}open{% endif %}>
+            <summary>Vincular sedes con locations reales</summary>
+            <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/gbp/connections/{{ item.connection.id }}/locations/bind" class="settings-form settings-form--location-bindings">
+              <div class="settings-form-heading">
+                <strong>Paso 3. Vincular sedes con locations reales</strong>
+                <span>Conecta cada perfil interno con la sede oficial exacta de Google.</span>
+              </div>
+              {% if item.available_locations %}
+              <div class="settings-location-grid">
+                {% for binding in item.bindings %}
+                <label class="settings-location-card">
+                  <span class="settings-location-title">{{ binding.profile.name }}</span>
+                  <select name="binding_select__{{ binding.profile.id }}">
+                    <option value="">Selecciona la sede oficial de Google</option>
+                    {% for location in item.available_locations %}
+                    <option value="{{ location.name }}" {% if binding.selected_location_name == location.name %}selected{% endif %}>
+                      {{ location.title }}
+                      {% if location.place_id %} · {{ location.place_id }}{% endif %}
+                    </option>
+                    {% endfor %}
+                  </select>
+                  <input
+                    type="text"
+                    name="binding__{{ binding.profile.id }}"
+                    value="{{ binding.selected_location_value }}"
+                    placeholder="o pega aquí locations/1234567890"
+                  />
+                  <small>
+                    {% if binding.profile.gbp_location_id %}
+                    Location actual: {{ binding.profile.gbp_location_id }}
+                    {% else %}
+                    Todavía sin vincular a una location real de Google.
+                    {% endif %}
+                  </small>
+                </label>
+                {% endfor %}
+              </div>
+              <button type="submit">Guardar vinculación real</button>
+              {% else %}
+              <div class="settings-empty-card">
+                Google no devolvió la lista automática de sedes todavía. Puedes pegar manualmente el identificador oficial de cada sede en formato <code>locations/1234567890</code> o <code>accounts/.../locations/1234567890</code>.
+              </div>
+              <div class="settings-location-grid">
+                {% for binding in item.bindings %}
+                <label class="settings-location-card">
+                  <span class="settings-location-title">{{ binding.profile.name }}</span>
+                  <input
+                    type="text"
+                    name="binding__{{ binding.profile.id }}"
+                    value="{{ binding.selected_location_value }}"
+                    placeholder="locations/1234567890"
+                  />
+                  <small>
+                    {% if binding.profile.gbp_location_id %}
+                    Location actual: {{ binding.profile.gbp_location_id }}
+                    {% else %}
+                    Pega aquí la location oficial de Google para desbloquear el backfill.
+                    {% endif %}
+                  </small>
+                </label>
+                {% endfor %}
+              </div>
+              <button type="submit">Guardar vinculación manual</button>
+              {% endif %}
+            </form>
+          </details>
+          {% endif %}
+          {% endfor %}
+          {% endif %}
+        </article>
+        {% elif view_kind == "platform" %}
+        <article class="settings-panel settings-panel--global-summary">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Organizaciones</span>
+              <h2>Acceso rápido por contexto</h2>
+            </div>
+            <small>{{ organizations|length }} visibles</small>
+          </div>
+          <div class="settings-global-table-head" aria-hidden="true">
+            <span>Organización</span>
+            <span>Tipo</span>
+            <span>Estado</span>
+            <span>Acción</span>
+          </div>
+          <div class="settings-global-list">
+            {% for organization in organizations if organization.id != selected_org.item.id %}
+            <form method="post" action="/settings/organization-selection" class="settings-global-row-form">
+              <input type="hidden" name="organization_id" value="{{ organization.id }}" />
+              <button type="submit" class="settings-global-row">
+                <div class="settings-global-row-copy">
+                  <strong>{{ organization.name }}</strong>
+                  <span>{{ organization_health[organization.id].summary }}</span>
+                </div>
+                <span class="settings-global-row-type">
+                  {% if organization.organization_type.value == "dealer" %}
+                  Concesionario
+                  {% elif organization.organization_type.value == "network" %}
+                  Red
+                  {% else %}
+                  Plataforma
+                  {% endif %}
+                </span>
+                <span class="organization-health-badge organization-health-badge--{{ organization_health[organization.id].tone }}">{{ organization_health[organization.id].label }}</span>
+                <span class="settings-global-row-action">Abrir</span>
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+        </article>
+        {% else %}
+        <article class="settings-panel settings-panel--mode settings-panel--network-overview">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Gobierno de red</span>
+              <h2>Panorama operativo de la red</h2>
+            </div>
+            <small>Concesionarios y sedes bajo Yamaha Red Oficial.</small>
+          </div>
+          <div class="settings-mode-grid">
+            <article>
+              <strong>{{ network_summary.dealers }}</strong>
+              <span>concesionarios</span>
+            </article>
+            <article>
+              <strong>{{ network_summary.branches }}</strong>
+              <span>sedes monitoreadas</span>
+            </article>
+            <article>
+              <strong>{{ network_summary.connected_orgs }}</strong>
+              <span>con GBP activa</span>
+            </article>
+          </div>
+        </article>
+        <article class="settings-panel settings-panel--global-summary settings-panel--network-table">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Concesionarios</span>
+              <h2>Red oficial Yamaha</h2>
+            </div>
+            <small>{{ network_summary.attention_orgs }} con atención</small>
+          </div>
+          <div class="settings-network-table-head" aria-hidden="true">
+            <span>Concesionario</span>
+            <span>Sedes</span>
+            <span>GBP</span>
+            <span>Estado</span>
+            <span>Acción</span>
+          </div>
+          <div class="settings-network-list">
+            {% for row in network_rows %}
+            <form method="post" action="/settings/organization-selection" class="settings-network-row-form">
+              <input type="hidden" name="organization_id" value="{{ row.organization.id }}" />
+              <button type="submit" class="settings-network-row">
+                <div class="settings-network-row-copy">
+                  <strong>{{ row.organization.name }}</strong>
+                  <span>{{ row.member_count }} personas, {{ row.notification_count }} destinos activos</span>
+                  <div class="settings-network-branch-list">
+                    {% for branch_name in row.branch_names[:3] %}
+                    <span class="settings-network-branch-pill">{{ branch_name }}</span>
+                    {% endfor %}
+                    {% if row.branch_names|length > 3 %}
+                    <span class="settings-network-branch-pill settings-network-branch-pill--more">+{{ row.branch_names|length - 3 }} más</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <span class="settings-network-row-count">{{ row.branch_count }}</span>
+                <span class="settings-network-row-coverage">{{ row.gbp_summary }}</span>
+                <span class="organization-health-badge organization-health-badge--{{ row.health.tone }}">{{ row.health.label }}</span>
+                <span class="settings-network-row-action">Abrir</span>
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+        </article>
+        <article class="settings-panel settings-panel--people settings-panel--network-secondary">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Equipo</span>
+              <h2>{{ selected_memberships|length }} personas con acceso</h2>
+            </div>
+            <small>Quién coordina esta red.</small>
+          </div>
+          <ul class="settings-list settings-list--people">
+            {% for row in selected_memberships %}
+            <li>
+              <div class="settings-list-primary">
+                <strong>{{ row.user.full_name if row.user else row.membership.user_id }}</strong>
+                <span>{{ row.user.email if row.user else '' }}</span>
+              </div>
+              <small>{{ row.membership.role.value | replace('_', ' ') | title }}</small>
+            </li>
+            {% else %}
+            <li class="settings-empty-card">Todavía no hay personas asociadas a esta red. Agrega al menos un responsable para coordinar cobertura y seguimiento.</li>
+            {% endfor %}
+          </ul>
+          {% if current_actor.can_manage_platform or current_actor.can_manage_organization(selected_org.item.id) %}
+          <details class="settings-disclosure" {% if selected_memberships|length < 2 %}open{% endif %}>
+            <summary>Invitar usuario</summary>
+            <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/invite" class="settings-form">
+              <div class="settings-form-heading">
+                <strong>Nuevo acceso a la red</strong>
+                <span>Agrega personas para coordinar Yamaha Red Oficial.</span>
+              </div>
+              <label>
+                <span>Nombre completo</span>
+                <input type="text" name="full_name" placeholder="Nombre completo" required />
+              </label>
+              <label>
+                <span>Correo</span>
+                <input type="email" name="email" placeholder="correo@empresa.com" required />
+              </label>
+              <label>
+                <span>Rol</span>
+                <select name="role">
+                  <option value="dealer_member">Miembro de red</option>
+                  <option value="dealer_admin">Administrador de red</option>
+                </select>
+              </label>
+              <button type="submit">Invitar usuario</button>
+            </form>
+          </details>
+          {% endif %}
+        </article>
+        {% endif %}
+
+        <article class="settings-panel settings-panel--notifications {% if view_kind == 'network' %}settings-panel--network-secondary{% endif %}">
+          <div class="settings-panel-topline">
+            <div>
+              <span class="panel-kicker">Alertas</span>
+              <h2>{% if view_kind == "dealer" %}Alertas del concesionario{% elif view_kind == "network" %}Alertas de coordinación{% else %}Notificaciones internas{% endif %}</h2>
+            </div>
+            <small>{% if view_kind == "dealer" %}Casos activos y destinos de notificación.{% elif view_kind == "network" %}Mantén a la red informada.{% else %}Mantén la operación interna visible.{% endif %}</small>
+          </div>
+          {% if view_kind == "dealer" %}
+          <div class="settings-alert-section">
+            <div class="settings-form-heading">
+              <strong>{{ selected_cases_for_org|length }} alertas visibles</strong>
+              <span>Casos abiertos o en seguimiento dentro de las sedes del concesionario.</span>
+            </div>
+            <ul class="settings-list settings-list--alerts">
+              {% for case in selected_cases_for_org %}
+              <li>
+                <div class="settings-list-primary">
+                  <strong>{{ case.title }}</strong>
+                  <span>{{ case.dealer_name }} · riesgo {{ case.risk_score }}/100</span>
+                </div>
+                <a class="hero-link" href="/cases/{{ case.id }}">Abrir expediente</a>
+              </li>
+              {% else %}
+              <li class="settings-empty-card">No hay alertas activas asociadas a las sedes de este concesionario.</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          <div class="settings-alert-section">
+            <div class="settings-form-heading">
+              <strong>{% if view_kind == "dealer" %}Destinos que reciben señales{% else %}Destinos activos{% endif %}</strong>
+              <span>{% if view_kind == "dealer" %}Canales donde llegan las alertas de las sedes asociadas.{% else %}Canales activos para este contexto.{% endif %}</span>
+            </div>
+          <ul class="settings-list">
+            {% for destination in notifications %}
+            <li>
+              <div class="settings-list-primary">
+                <strong>{{ destination.target }}</strong>
+                <span>{{ destination.channel.value | upper }}</span>
+              </div>
+              <small>{{ destination.subscribed_events|length }} eventos activos</small>
+            </li>
+            {% else %}
+            <li class="settings-empty-card">No hay destinos activos todavía para esta organización. Agrega un correo para no perder alertas críticas ni cambios de estado.</li>
+            {% endfor %}
+          </ul>
+          </div>
+          {% if can_manage_selected_org %}
+          <details class="settings-disclosure">
+            <summary>Agregar correo receptor</summary>
+            <form method="post" action="/settings/organizations/{{ selected_org.item.id }}/notifications/email" class="settings-form">
+              <div class="settings-form-heading">
+                <strong>Nuevo destino</strong>
+                <span>Recibe alertas apenas cambie un caso.</span>
+              </div>
+              <label>
+                <span>Correo de alertas</span>
+                <input type="email" name="target" placeholder="alertas@empresa.com" required />
+              </label>
+              <button type="submit">Agregar destino</button>
+            </form>
+          </details>
+          {% endif %}
+        </article>
+      </section>
+      {% endif %}
+    </section>
+  </section>
+</main>
+<script>
+  (() => {
+    const viewSelect = document.querySelector("[data-settings-view-select]");
+    if (!viewSelect) return;
+    viewSelect.addEventListener("change", () => {
+      viewSelect.form?.requestSubmit();
+    });
+  })();
+</script>
+{% endblock %}

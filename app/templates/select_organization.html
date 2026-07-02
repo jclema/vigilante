@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<main id="main-content" class="auth-shell" tabindex="-1">
+  <section class="auth-card auth-card--compact">
+    <div class="auth-copy">
+      <span class="panel-kicker">Cambiar vista</span>
+      <h1>Elige la organización.</h1>
+      <p>La vista se ajusta a esta selección.</p>
+    </div>
+    <form method="post" action="/auth/select-organization" class="auth-form">
+      <label>
+        <span>Organización</span>
+        <select name="organization_id">
+          {% for option in settings_view_options %}
+          <option value="{{ '' if option.id == '__network__' else option.id }}" {% if (option.id == "__network__" and not active_organization) or (active_organization and active_organization.id == option.id) %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Usar esta vista</button>
+    </form>
+  </section>
+</main>
+{% endblock %}

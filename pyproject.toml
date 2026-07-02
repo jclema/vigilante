@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vigilante"
+version = "0.1.0"
+description = "Hybrid anti-phishing pilot for Yamaha dealer monitoring on Google Maps."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "google-cloud-firestore>=2.21,<3.0",
+  "google-cloud-storage>=2.19,<3.0",
+  "google-cloud-vision>=3.8,<4.0",
+  "itsdangerous>=2.2,<3.0",
+  "uvicorn[standard]>=0.32,<1.0",
+  "jinja2>=3.1,<4.0",
+  "python-multipart>=0.0.18,<1.0",
+  "pydantic>=2.9,<3.0",
+]
+
+[project.optional-dependencies]
+capture = [
+  "playwright==1.52.0",
+]
+dev = [
+  "build>=1.2,<2.0",
+  "httpx>=0.27,<1.0",
+  "pytest>=8.3,<9.0",
+  "pytest-cov>=6.0,<8.0",
+  "ruff>=0.11,<1.0",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+app = [
+  "static/*.css",
+  "static/*.svg",
+  "templates/*.html",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

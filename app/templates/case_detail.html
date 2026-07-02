@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <img src="/static/yamaha-12.svg" alt="Logo Yamaha" />
+      </div>
+      <div class="brand-copy">
+        <div class="brand-name">{{ app_name }}</div>
+        <div class="brand-meta">Expediente con evidencia, contraste y seguimiento.</div>
+      </div>
+    </div>
+    <nav class="nav" aria-label="Secciones del expediente">
+      <a href="/"><span>↩️</span> Dashboard</a>
+      <a href="#next-step"><span>🎯</span> Siguiente paso</a>
+      <a href="#evidence"><span>🖼️</span> Evidencia</a>
+      <a href="#context"><span>🧾</span> Contraste</a>
+      <a href="#follow-up"><span>📨</span> Seguimiento</a>
+    </nav>
+    <div class="sidebar-note">
+      Resuelve tres cosas: si la alerta es real, dónde está la prueba principal y qué toca hacer ahora.
+    </div>
+  </aside>
+
+  <main id="main-content" class="main" tabindex="-1">
+    {% if case_notice %}
+    <section class="case-inline-notice case-inline-notice--{{ case_notice_tone }}">
+      <strong>{{ case_notice }}</strong>
+      {% if case_notice_detail %}
+      <span>{{ case_notice_detail }}</span>
+      {% endif %}
+    </section>
+    {% endif %}
+    <section class="case-hero case-hero--distilled">
+      <div class="case-hero-copy">
+        <div class="eyebrow">{{ detail.source_label }}</div>
+        <h1>{{ detail.case.title }}</h1>
+        <p class="case-hero-summary">{{ detail.case.summary }}</p>
+        <div class="hero-tags">
+          <span>🏍️ {{ detail.case.dealer_name }}</span>
+          <span>📍 {{ detail.case.city }}</span>
+          <span>🛰️ {{ detail.monitoring_mode_label }} <span class="tooltip-chip" tabindex="0" title="{{ detail.dealer_snapshot.monitoring_help }}">?</span></span>
+          <span>📨 {{ detail.google_status_label }}</span>
+        </div>
+      </div>
+      <article id="next-step" class="case-hero-focus {{ detail.risk_tone }}">
+        <span class="panel-kicker">{{ detail.playbook.label }}</span>
+        <h2>{{ detail.playbook.headline }}</h2>
+        <p>{{ detail.playbook.summary }}</p>
+        <div class="hero-actions">
+          <a class="hero-link" href="{{ detail.command_center.primary_action.href }}">{{ detail.command_center.primary_action.label }}</a>
+          <a class="hero-link secondary" href="{{ detail.command_center.follow_up_action.href }}">{{ detail.command_center.follow_up_action.label }}</a>
+        </div>
+        <div class="case-focus-board">
+          <article class="case-focus-risk {{ detail.risk_tone }}">
+            <div class="case-focus-risk-top">
+              <span class="risk-eyebrow">Nivel de riesgo</span>
+              <small class="risk-badge {{ detail.risk_tone }}">{% if detail.risk_tone == "risk-critical" %}🚨 {% elif detail.risk_tone == "risk-high" %}🔶 {% elif detail.risk_tone == "risk-medium" %}👀 {% else %}✅ {% endif %}{{ detail.risk_band.label }}</small>
+            </div>
+            <div class="case-focus-risk-score">
+              <strong>{{ detail.risk_gauge.score }}</strong>
+              <span>de 100</span>
+            </div>
+            <p>{{ detail.risk_gauge.benchmark }}</p>
+            <small>{{ detail.risk_band.context }}</small>
+          </article>
+          <article class="case-focus-item">
+            <span>Estado del caso</span>
+            <strong>{{ detail.case_status_label }}</strong>
+            <small>{{ detail.command_center.primary_action.label }}</small>
+          </article>
+          <article class="case-focus-item">
+            <span>Situación con Google</span>
+            <strong>{{ detail.google_status_label }}</strong>
+            <small>{{ detail.report.response_summary if detail.report and detail.report.response_summary else 'Sin respuesta registrada todavía.' }}</small>
+          </article>
+        </div>
+      </article>
+    </section>
+
+    <section id="evidence" class="section">
+      {% if detail.case.source_type == 'review_photo' or not detail.clone_comparison %}
+      <div class="section-header">
+        <div>
+          <h2>Prueba principal</h2>
+          <p>{% if detail.case.source_type == 'review_photo' %}La foto sospechosa primero.{% else %}Empieza aquí.{% endif %}</p>
+        </div>
+      </div>
+      {% endif %}
+      {% if detail.primary_evidence and (detail.case.source_type == 'review_photo' or not detail.clone_comparison) %}
+      <article class="primary-evidence-stage">
+        <div class="primary-evidence-copy">
+          <div class="primary-evidence-head">
+            <span class="panel-kicker">Prueba principal</span>
+            <h3>{{ detail.primary_evidence.label }}</h3>
+          </div>
+          <p class="primary-evidence-summary"><strong>Identificado:</strong> {{ detail.identified_at }}</p>
+          <p class="primary-evidence-summary">{{ detail.primary_evidence.summary }}</p>
+          <div class="primary-evidence-actions threat-inline-actions">
+            {% if detail.primary_evidence.maps_link %}
+            <a class="hero-link" href="{{ detail.primary_evidence.maps_link }}">📍 {{ detail.primary_evidence.maps_link_label or 'Abrir evidencia en Google Maps' }}</a>
+            {% endif %}
+            {% if detail.primary_evidence.dealer_maps_link %}
+            <a class="hero-link secondary" href="{{ detail.primary_evidence.dealer_maps_link }}">🏍️ {{ detail.primary_evidence.dealer_maps_link_label or 'Contrastar con sede oficial' }}</a>
+            {% endif %}
+          </div>
+        </div>
+        {% if detail.primary_evidence.media %}
+        <figure class="primary-evidence-visual">
+          <div class="primary-evidence-frame">
+            <img src="{{ detail.primary_evidence.media.url }}" alt="{{ detail.primary_evidence.media.caption }}" loading="lazy" />
+            <span class="primary-evidence-chip">Evidencia preservada</span>
+          </div>
+          <figcaption>{{ detail.primary_evidence.media.caption }}</figcaption>
+        </figure>
+        {% endif %}
+      </article>
+      {% endif %}
+      {% if detail.clone_comparison %}
+      <article class="clone-comparison-stage">
+        <div class="section-header">
+          <div>
+            <h2>Comparación clara: clon vs sede oficial</h2>
+            <p>La decisión principal del expediente.</p>
+          </div>
+        </div>
+        <div class="clone-summary-strip">
+          <article>
+            <span>Distancia</span>
+            <strong>{% if detail.clone_comparison.distance_m is not none %}{{ detail.clone_comparison.distance_m }} m{% else %}Sin cálculo{% endif %}</strong>
+          </article>
+          <article>
+            <span>Query</span>
+            <strong>{{ detail.clone_comparison.source_query or 'Sin query principal' }}</strong>
+          </article>
+          <article>
+            <span>Apariciones</span>
+            <strong>{{ detail.clone_comparison.query_hits|length if detail.clone_comparison.query_hits else 0 }}</strong>
+          </article>
+        </div>
+        <div class="clone-comparison-grid">
+          <article class="intel-panel clone-comparison-card clone-comparison-card--suspect">
+            <div class="clone-comparison-card-head">
+              <span class="panel-kicker">Punto sospechoso</span>
+              <span class="clone-comparison-badge clone-comparison-badge--alert">Clon observado</span>
+            </div>
+            <h3>{{ detail.clone_comparison.clone_name }}</h3>
+            <dl class="intel-list">
+              <div><dt>Dirección</dt><dd>{{ detail.clone_comparison.clone_address }}</dd></div>
+              <div><dt>Teléfono</dt><dd>{{ detail.clone_comparison.clone_phone }}</dd></div>
+              <div><dt>Categoría</dt><dd>{{ detail.clone_comparison.clone_category }}</dd></div>
+              <div><dt>Reseñas</dt><dd>{% if detail.clone_comparison.clone_reviews %}{{ detail.clone_comparison.clone_reviews }}{% else %}Sin dato{% endif %}</dd></div>
+              <div><dt>Rating</dt><dd>{% if detail.clone_comparison.clone_rating %}{{ detail.clone_comparison.clone_rating }}{% else %}Sin dato{% endif %}</dd></div>
+            </dl>
+            {% if detail.clone_comparison.clone_maps_link %}
+            <a class="hero-link" href="{{ detail.clone_comparison.clone_maps_link }}">📍 Abrir ficha del clon</a>
+            {% endif %}
+          </article>
+          <article class="intel-panel clone-comparison-card">
+            <div class="clone-comparison-card-head">
+              <span class="panel-kicker">Sede oficial Yamaha</span>
+              <span class="clone-comparison-badge">Referencia oficial</span>
+            </div>
+            <h3>{{ detail.clone_comparison.official_name }}</h3>
+            <dl class="intel-list">
+              <div><dt>Dirección</dt><dd>{{ detail.clone_comparison.official_address }}</dd></div>
+              <div><dt>Teléfonos</dt><dd>{{ detail.clone_comparison.official_phones|join(', ') if detail.clone_comparison.official_phones else 'Sin registro' }}</dd></div>
+              <div><dt>Distancia</dt><dd>{% if detail.clone_comparison.distance_m is not none %}{{ detail.clone_comparison.distance_m }} m{% else %}Sin cálculo{% endif %}</dd></div>
+              <div><dt>Query de hallazgo</dt><dd>{{ detail.clone_comparison.source_query or 'Sin query principal' }}</dd></div>
+              <div><dt>Apareció en</dt><dd>{{ detail.clone_comparison.query_hits|join(', ') if detail.clone_comparison.query_hits else 'Sin histórico adicional' }}</dd></div>
+            </dl>
+            {% if detail.clone_comparison.official_maps_link %}
+            <a class="hero-link secondary" href="{{ detail.clone_comparison.official_maps_link }}">🏍️ Abrir ficha oficial</a>
+            {% endif %}
+          </article>
+        </div>
+        <article class="intel-panel">
+          <div class="panel-kicker">Por qué Vigilante lo marcó como clon</div>
+          <ul class="signal-list">
+            {% for reason in detail.clone_comparison.reasons[:4] %}
+            <li>{{ reason }}</li>
+            {% endfor %}
+          </ul>
+        </article>
+      </article>
+      {% endif %}
+      <details class="follow-up-details" id="artifact-list">
+        <summary>Ver artefactos adicionales y datos técnicos</summary>
+        <div class="detail-disclosure-body">
+          <div class="evidence-grid">
+            {% for artifact in detail.evidence_cards %}
+            <article class="evidence-card">
+              <div class="evidence-head">
+                <span>{{ artifact.type }}</span>
+                <strong>{{ artifact.label }}</strong>
+                <small>{{ artifact.created_at }}</small>
+              </div>
+              {% if artifact.media %}
+              <div class="evidence-visual">
+                <img src="{{ artifact.media.url }}" alt="{{ artifact.media.caption }}" loading="lazy" />
+                <small>{{ artifact.media.caption }}</small>
+              </div>
+              {% endif %}
+              <p>{{ artifact.summary }}</p>
+              <div class="threat-inline-actions">
+                {% if artifact.maps_link %}
+                <a class="mini-link" href="{{ artifact.maps_link }}">📍 {{ artifact.maps_link_label or 'Abrir ficha en Google Maps' }}</a>
+                {% endif %}
+                {% if artifact.dealer_maps_link %}
+                <a class="mini-link" href="{{ artifact.dealer_maps_link }}">🏍️ {{ artifact.dealer_maps_link_label or 'Ver sede oficial' }}</a>
+                {% endif %}
+              </div>
+              <details>
+                <summary>Ver datos técnicos del artefacto</summary>
+                <pre>{{ artifact.content | tojson(indent=2) }}</pre>
+              </details>
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section id="context" class="section">
+      <div class="section-header">
+        <h2>Contraste rápido</h2>
+        <p>{% if detail.case.source_type == 'review_photo' %}Solo lo mínimo para contrastar la foto con la sede oficial.{% else %}Lo esencial para decidir.{% endif %}</p>
+      </div>
+      <div class="context-stage {% if detail.case.source_type == 'review_photo' %}context-stage--compact{% endif %}">
+        <article class="intel-panel">
+          <div class="panel-kicker">Sede oficial</div>
+          <h3>{{ detail.dealer_snapshot.name }}</h3>
+          <div class="threat-pills">
+            <span class="threat-pill is-source risk-bucket-pill risk-bucket-pill--{{ detail.risk_bucket_tone }}">🧭 {{ detail.risk_bucket_label }}</span>
+            <span class="threat-pill is-priority {{ detail.visual_tone }}">{{ detail.priority_label }}</span>
+          </div>
+          <dl class="intel-list">
+            {% if detail.case.source_type != 'review_photo' %}
+            <div><dt>Ciudad</dt><dd>{{ detail.dealer_snapshot.city }}</dd></div>
+            {% endif %}
+            <div><dt>Dirección</dt><dd>{{ detail.dealer_snapshot.address }}</dd></div>
+            <div><dt>Teléfonos</dt><dd>{{ detail.dealer_snapshot.phones|join(', ') if detail.dealer_snapshot.phones else 'Sin registro' }}</dd></div>
+            {% if detail.case.source_type != 'review_photo' %}
+            <div><dt>Monitoreo</dt><dd>{{ detail.dealer_snapshot.monitoring_mode }}</dd></div>
+            {% endif %}
+          </dl>
+          <div class="threat-inline-actions">
+            {% if detail.primary_evidence and detail.primary_evidence.maps_link %}
+            <a class="mini-link" href="{{ detail.primary_evidence.maps_link }}">📍 {{ detail.primary_evidence.maps_link_label or 'Abrir punto sospechoso' }}</a>
+            {% endif %}
+            {% if detail.primary_evidence and detail.primary_evidence.dealer_maps_link %}
+            <a class="mini-link" href="{{ detail.primary_evidence.dealer_maps_link }}">🏍️ {{ detail.primary_evidence.dealer_maps_link_label or 'Abrir sede oficial' }}</a>
+            {% endif %}
+          </div>
+        </article>
+        <article class="intel-panel">
+          <div class="panel-kicker">Lo que sostiene o tumba la alerta</div>
+          <div class="context-stack">
+            <div class="context-block">
+              <strong>Señales detectadas</strong>
+              <ul class="signal-list">
+                {% for reason in detail.case.risk_reasons[:3] %}
+                <li>{{ reason }}</li>
+                {% endfor %}
+              </ul>
+              {% if detail.case.risk_reasons|length > 3 %}
+              <details class="follow-up-details">
+                <summary>Ver más señales</summary>
+                <div class="detail-disclosure-body">
+                  <ul class="signal-list">
+                    {% for reason in detail.case.risk_reasons[3:] %}
+                    <li>{{ reason }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </details>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="follow-up" class="section">
+      <div class="section-header">
+        <h2>Acción y seguimiento</h2>
+        <p>Decide, reporta o deja trazabilidad.</p>
+      </div>
+      <div class="follow-up-stage">
+        <div class="action-stack action-stack--distilled action-stack--single">
+          <article class="intel-panel">
+            <div class="panel-kicker">Acción ahora</div>
+            <h3>{{ detail.command_center.title }}</h3>
+            <p>{{ detail.command_center.summary }}</p>
+            <dl class="intel-list">
+              <div><dt>Estado del caso</dt><dd>{{ detail.case_status_label }}</dd></div>
+              <div><dt>Situación con Google</dt><dd>{{ detail.google_status_label }}</dd></div>
+              <div><dt>Acción recomendada</dt><dd>{{ detail.command_center.primary_action.label }}</dd></div>
+            </dl>
+          </article>
+          <article class="intel-panel">
+            <div class="panel-kicker">Browser enforcement piloto</div>
+            <h3>{{ detail.browser_panel.status_label }}</h3>
+            {% if detail.browser_panel.eligible %}
+            <p>{{ detail.browser_panel.help }}</p>
+            <dl class="intel-list">
+              <div><dt>Elegible</dt><dd>Sí, alta certeza</dd></div>
+              <div><dt>Sesión dealer</dt><dd>{% if detail.browser_panel.session_active %}Activa{% else %}Requiere refresco{% endif %}</dd></div>
+              <div><dt>Cuenta usada</dt><dd>{{ detail.browser_panel.session_owner or 'Sin sesión conectada' }}</dd></div>
+            </dl>
+            {% else %}
+            <div class="browser-compact-status">
+              <p>{{ detail.browser_panel.help }}</p>
+              <div class="threat-pills">
+                <span class="threat-pill {% if detail.browser_panel.eligible %}is-source{% else %}is-priority risk-watchlist{% endif %}">🧭 {% if detail.browser_panel.eligible %}Alta certeza{% else %}No elegible todavía{% endif %}</span>
+                <span class="threat-pill is-source">🔐 {% if detail.browser_panel.session_active %}Sesión activa{% else %}Sesión pendiente{% endif %}</span>
+              </div>
+              <small>{{ detail.browser_panel.session_owner or 'Sin sesión conectada todavía.' }}</small>
+            </div>
+            {% endif %}
+            {% if detail.browser_panel.blockers %}
+            <div class="browser-blockers">
+              <strong>Bloqueos actuales</strong>
+              <div class="browser-blocker-list">
+                {% for blocker in detail.browser_panel.blocker_states %}
+                <article class="browser-blocker-item browser-blocker-item--{{ blocker.status|lower }}">
+                  <div class="browser-blocker-item__head">
+                    <span>{{ blocker.label }}</span>
+                    <strong>{{ blocker.status }}</strong>
+                  </div>
+                  <p>{{ blocker.detail }}</p>
+                </article>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+            {% if detail.browser_panel.show_submit_action %}
+            <form method="post" action="/cases/{{ detail.case.id }}/browser-enforcement/submit" class="browser-submit-form">
+              <button type="submit" {% if not detail.browser_panel.manual_submit_ready %}disabled{% endif %}>
+                {% if detail.browser_panel.manual_submit_ready %}
+                Denunciar ahora con browser automation
+                {% else %}
+                Denuncia deshabilitada por bloqueos previos
+                {% endif %}
+              </button>
+            </form>
+            <p class="action-form-help">
+              {% if detail.browser_panel.manual_submit_ready %}
+              En piloto, la denuncia solo se ejecuta cuando un humano hace clic. Después del clic, Vigilante documenta el run y el resultado.
+              {% else %}
+              La acción queda visible para que el humano entienda que este caso sí entra al flujo de denuncia, pero todavía tiene bloqueos previos que debemos resolver.
+              {% endif %}
+            </p>
+            {% else %}
+            <p class="action-form-help">Para ejecutar la denuncia aquí primero necesitamos detectar un target denunciable claro dentro de la evidencia del caso.</p>
+            {% endif %}
+          </article>
+          <form class="action-form" method="post" action="/cases/{{ detail.case.id }}/status">
+            <label for="status">{{ detail.follow_up_form.label }}</label>
+            <p class="action-form-help">{{ detail.follow_up_form.help }}</p>
+            <input type="hidden" name="next_path" value="/cases/{{ detail.case.id }}" />
+            <select id="status" name="status">
+              <option value="new" {% if detail.command_center.status_suggestion == "new" %}selected{% endif %}>Nuevo</option>
+              <option value="triaged" {% if detail.command_center.status_suggestion == "triaged" %}selected{% endif %}>En evaluación</option>
+              <option value="confirmed" {% if detail.command_center.status_suggestion == "confirmed" %}selected{% endif %}>Confirmado</option>
+              <option value="dismissed" {% if detail.command_center.status_suggestion == "dismissed" %}selected{% endif %}>Archivado</option>
+              <option value="reported" {% if detail.command_center.status_suggestion == "reported" %}selected{% endif %}>Reportado</option>
+            </select>
+            <button type="submit">{{ detail.follow_up_form.submit_label }}</button>
+          </form>
+        </div>
+        <div class="follow-up-disclosures">
+          {% if detail.browser_panel.latest_run or detail.browser_panel.runs %}
+          <details class="follow-up-details">
+            <summary>Ver trazabilidad de denuncias browser</summary>
+            <div class="detail-disclosure-body">
+              <div class="browser-run-list">
+                {% for run in detail.browser_panel.runs %}
+                <section class="browser-run-card">
+                  <div class="browser-run-card__head">
+                    <strong>{{ run.status_label }}</strong>
+                    <span>{{ run.execution_mode_label }} · {{ run.flow_type_label }}</span>
+                  </div>
+                  <p><strong>Inicio:</strong> {{ run.started_at }}<br /><strong>Fin:</strong> {{ run.finished_at }}</p>
+                  {% if run.target_url %}
+                  <p><a class="mini-link" href="{{ run.target_url }}">Abrir target denunciado</a></p>
+                  {% endif %}
+                  {% if run.error_detail %}
+                  <p><strong>Error:</strong> {{ run.error_detail }}</p>
+                  {% endif %}
+                  {% if run.screenshots %}
+                  <ul class="signal-list">
+                    {% for screenshot in run.screenshots %}
+                    <li><a class="mini-link" href="{{ screenshot }}">Screenshot {{ loop.index }}</a></li>
+                    {% endfor %}
+                  </ul>
+                  {% endif %}
+                  {% if run.audit_log %}
+                  <details class="follow-up-details">
+                    <summary>Ver bitácora del run</summary>
+                    <div class="detail-disclosure-body">
+                      <pre>{{ run.audit_log | tojson(indent=2) }}</pre>
+                    </div>
+                  </details>
+                  {% endif %}
+                </section>
+                {% endfor %}
+              </div>
+            </div>
+          </details>
+          {% endif %}
+          {% if detail.report_brief %}
+          <details class="follow-up-details" open>
+            <summary>Borrador asistido para Google</summary>
+            <div class="detail-disclosure-body">
+              <article class="intel-panel report-brief-panel">
+                <div class="panel-kicker">📨 Borrador asistido para Google</div>
+                <h3>{{ detail.report_brief.title }}</h3>
+                <p>{{ detail.report_brief.summary }}</p>
+                {% if detail.report_brief.executive_summary %}
+                <p><strong>Qué está pasando:</strong> {{ detail.report_brief.executive_summary }}</p>
+                {% endif %}
+                {% if detail.report_brief.policy_basis %}
+                <p><strong>Por qué merece revisión:</strong> {{ detail.report_brief.policy_basis }}</p>
+                {% endif %}
+                <dl class="intel-list">
+                  <div><dt>Teléfono oficial</dt><dd>{{ detail.report_brief.official_phone }}</dd></div>
+                  <div><dt>Teléfono sospechoso</dt><dd>{{ detail.report_brief.suspicious_phone }}</dd></div>
+                  <div><dt>Acción solicitada</dt><dd>{{ detail.report_brief.requested_action }}</dd></div>
+                </dl>
+                {% if detail.report_brief.submission_notes %}
+                <ul class="signal-list">
+                  {% for note in detail.report_brief.submission_notes %}
+                  <li>{{ note }}</li>
+                  {% endfor %}
+                </ul>
+                {% endif %}
+                {% if detail.report_brief.copy_ready_text %}
+                <details class="follow-up-details">
+                  <summary>Texto listo para copiar en Google</summary>
+                  <div class="detail-disclosure-body">
+                    <div class="copy-ready-panel">
+                      <button
+                        class="case-link secondary copy-report-button"
+                        type="button"
+                        data-copy-report="{{ detail.report_brief.copy_ready_text }}"
+                      >
+                        Copiar texto
+                      </button>
+                      <pre>{{ detail.report_brief.copy_ready_text }}</pre>
+                    </div>
+                  </div>
+                </details>
+                {% endif %}
+                <div class="threat-inline-actions">
+                  {% if detail.report_brief.report_url %}
+                  <a class="hero-link" href="{{ detail.report_brief.report_url }}">Abrir borrador para Google</a>
+                  {% endif %}
+                  {% if detail.report_brief.evidence_links %}
+                  <a class="hero-link secondary" href="{{ detail.report_brief.evidence_links[0].url }}">Ver evidencia principal</a>
+                  {% endif %}
+                </div>
+              </article>
+            </div>
+          </details>
+          {% endif %}
+          <details class="follow-up-details" open>
+            <summary>Ver línea de tiempo del caso</summary>
+            <div class="detail-disclosure-body">
+              <div class="timeline">
+                {% for item in detail.timeline %}
+                <article class="timeline-item tone-{{ item.tone }}">
+                  <div class="timeline-point"></div>
+                  <div class="timeline-body">
+                    <div class="timeline-top">
+                      <strong>{{ item.label }}</strong>
+                      <span>{{ item.time }}</span>
+                    </div>
+                    <p>{{ item.detail }}</p>
+                  </div>
+                </article>
+                {% endfor %}
+              </div>
+            </div>
+          </details>
+          <details class="follow-up-details" open>
+            <summary>Ver otros casos de esta sede</summary>
+            <div class="detail-disclosure-body">
+              {% if detail.related_cases %}
+              <div class="related-list">
+                {% for item in detail.related_cases %}
+                <a class="related-case" href="/cases/{{ item.id }}">
+                  <strong>{{ item.title }}</strong>
+                  <span>{{ item.status.value | replace('_', ' ') | title }} · riesgo {{ item.risk_score }}</span>
+                </a>
+                {% endfor %}
+              </div>
+              {% else %}
+              <p class="related-empty">No hay otros casos activos asociados a este concesionario en este momento.</p>
+              {% endif %}
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <div class="sticky-action-bar">
+      <div class="sticky-action-copy">
+        <span>🎯 Siguiente mejor acción</span>
+        <strong>{{ detail.command_center.title }}</strong>
+        <small>{{ detail.google_status_label }}</small>
+      </div>
+      <div class="sticky-action-actions">
+        <a class="hero-link" href="{{ detail.sticky_actions.primary.href }}">{{ detail.sticky_actions.primary.label }}</a>
+        <a class="hero-link secondary" href="{{ detail.sticky_actions.follow_up.href }}">{{ detail.sticky_actions.follow_up.label }}</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  (() => {
+    const copyButton = document.querySelector("[data-copy-report]");
+    if (!copyButton) return;
+
+    const originalLabel = copyButton.textContent;
+    copyButton.addEventListener("click", async () => {
+      const payload = copyButton.getAttribute("data-copy-report") || "";
+      try {
+        await navigator.clipboard.writeText(payload);
+        copyButton.textContent = "Texto copiado";
+        window.setTimeout(() => {
+          copyButton.textContent = originalLabel;
+        }, 1800);
+      } catch (error) {
+        copyButton.textContent = "No se pudo copiar";
+        window.setTimeout(() => {
+          copyButton.textContent = originalLabel;
+        }, 1800);
+      }
+    });
+  })();
+</script>
+{% endblock %}
