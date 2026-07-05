@@ -1,219 +1,128 @@
 {% extends "base.html" %}
 {% block content %}
-<main id="main-content" class="auth-shell auth-shell--login" tabindex="-1">
-  <section class="auth-stage">
-    <aside class="auth-story">
-      <div class="auth-story-grid">
-        <div class="auth-story-column">
-          <div class="auth-story-topline">
-            <span class="auth-story-badge">Piloto red Yamaha</span>
-            <strong class="auth-story-version">v1.0</strong>
-          </div>
-          <div class="auth-story-copy">
-            <div class="auth-brand">
-              <img src="/static/vigilante-mark.svg" alt="Logo Vigilante" class="auth-brand-mark" />
-              <div>
-                <span class="panel-kicker">Sistema anti-phishing</span>
-                <h1>Vigilante App</h1>
-              </div>
-            </div>
-            <h3 class="auth-story-headline">
-              Deteccion automatica de fotos maliciosas, clonacion de puntos y phishing en Google Maps para la red de concesionarios Yamaha
-            </h3>
-          </div>
-          <div class="auth-signal-grid">
-            <article class="auth-role-card auth-role-card--primary">
-              <span class="auth-signal-icon" aria-hidden="true">🛰️</span>
-              <strong>Monitoreo Inteligente</strong>
-              <span>En tiempo real 7 x 24.</span>
-            </article>
-            <article class="auth-role-card">
-              <span class="auth-signal-icon" aria-hidden="true">🧠</span>
-              <strong>Sistema IA de Alertas</strong>
-              <span>Identifiacacion y clasificacion inteligente</span>
-            </article>
-            <article class="auth-role-card">
-              <span class="auth-signal-icon" aria-hidden="true">📣</span>
-              <strong>Reporte Automático</strong>
-              <span>A Google para que tome acción</span>
-            </article>
-          </div>
-        </div>
-      </div>
-      <section class="auth-pulse" aria-label="Pulso de la red">
-        <div class="auth-pulse-head">
+<main id="main-content" class="auth-shell auth-shell--login auth-shell--atlas" tabindex="-1">
+  <section class="auth-stage auth-stage--atlas">
+    <aside class="auth-story auth-story--atlas">
+      <img
+        class="auth-atlas-image"
+        src="/static/medellin-atlas-login.webp"
+        alt=""
+        aria-hidden="true"
+      />
+      <div class="auth-atlas-wash" aria-hidden="true"></div>
+
+      <div class="auth-atlas-copy">
+        <div class="auth-atlas-brand">
+          <img src="/static/vigilante-mark.svg" alt="" class="auth-atlas-mark" />
           <div>
-            <span class="panel-kicker">Pulso de la red</span>
-            <h3>Alertas activas en Medellin y Valle de Aburra</h3>
+            <strong>Vigilante</strong>
+            <span>Sistema anti-phishing</span>
           </div>
-          <strong>En vivo</strong>
         </div>
-        <div class="auth-pulse-map" aria-hidden="true">
-          <svg viewBox="0 0 420 240" role="img" focusable="false">
-            <defs>
-              <linearGradient id="authPulseBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#fbfcfe" />
-                <stop offset="100%" stop-color="#e8eef7" />
-              </linearGradient>
-              <linearGradient id="authPulseTerrain" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#f7f9fd" />
-                <stop offset="100%" stop-color="#e2eaf6" />
-              </linearGradient>
-              <pattern id="authPulseGrid" width="24" height="24" patternUnits="userSpaceOnUse">
-                <path d="M24 0H0V24" fill="none" stroke="rgba(32,58,104,0.06)" stroke-width="1"/>
-              </pattern>
-              <pattern id="authPulseContours" width="84" height="84" patternUnits="userSpaceOnUse">
-                <path d="M8 60c16-16 30-14 42-4 10 8 20 8 34-2" fill="none" stroke="rgba(38,62,108,0.06)" stroke-width="1.2"/>
-                <path d="M0 28c11-10 22-11 34-4 13 8 28 8 50-6" fill="none" stroke="rgba(38,62,108,0.05)" stroke-width="1"/>
-              </pattern>
-            </defs>
-            <rect x="0" y="0" width="420" height="240" rx="28" fill="url(#authPulseBg)" />
-            <rect x="0" y="0" width="420" height="240" rx="28" fill="url(#authPulseGrid)" opacity="0.8" />
-            <rect x="0" y="0" width="420" height="240" rx="28" fill="url(#authPulseContours)" opacity="0.85" />
-            <path d="M118 30c22 18 29 42 25 65-5 28-25 45-29 67-4 21 7 39 23 49 17 10 42 11 63 4 23-7 40-21 53-38 15-20 24-42 31-66 7-21 13-43 10-63-4-21-20-39-39-49-18-9-40-12-62-10-30 2-57 16-75 41Z" fill="url(#authPulseTerrain)" stroke="rgba(24,57,120,0.14)" stroke-width="2"/>
-            <path d="M137 44c18 13 28 31 26 50-1 19-12 35-17 53-5 19-4 38 7 53 11 14 30 24 52 25 26 1 50-8 69-23 18-15 30-37 38-61 7-22 10-45 4-64-6-18-21-31-40-39-20-8-44-8-64-1-31 10-55 28-75 57Z" fill="none" stroke="rgba(26,55,112,0.22)" stroke-width="1.8"/>
-            <path d="M154 60c13 11 20 24 20 39 0 16-8 30-13 44-6 18-7 38 1 52 8 14 24 24 45 29 26 6 53 2 75-11 19-11 34-29 45-51 12-24 18-52 11-74-7-22-26-37-50-43-25-6-53-2-77 10-24 13-44 32-57 55Z" fill="none" stroke="rgba(26,55,112,0.14)" stroke-width="1.2"/>
-            <path d="M178 50c8 7 11 15 10 24-1 10-7 18-10 28-3 12-2 25 4 35 8 12 20 21 37 25 22 6 44 3 62-7 16-10 28-24 36-42 10-19 14-41 8-58-5-16-20-27-38-31-18-4-39-1-56 8-22 11-40 29-53 52Z" fill="none" stroke="rgba(167,28,37,0.12)" stroke-width="1.1"/>
-            <path d="M146 36c-10 12-18 27-22 43-5 17-7 35-4 52 2 13 7 26 7 39 1 21-8 41-7 61" fill="none" stroke="rgba(41,59,98,0.08)" stroke-width="1"/>
-            <path d="M271 38c10 14 18 30 22 46 4 18 4 37 1 55-3 16-10 30-11 46-1 19 5 37 10 55" fill="none" stroke="rgba(41,59,98,0.08)" stroke-width="1"/>
-            <path d="M96 52 330 182" fill="none" stroke="rgba(31,50,87,0.08)" stroke-width="1.2" stroke-dasharray="4 7"/>
-            <path d="M84 166 334 88" fill="none" stroke="rgba(31,50,87,0.08)" stroke-width="1.2" stroke-dasharray="4 7"/>
-            <path d="M126 28 126 212" fill="none" stroke="rgba(31,50,87,0.06)" stroke-width="1"/>
-            <path d="M209 20 209 220" fill="none" stroke="rgba(31,50,87,0.06)" stroke-width="1"/>
-            <path d="M292 28 292 212" fill="none" stroke="rgba(31,50,87,0.06)" stroke-width="1"/>
-            <path d="M88 78 340 78" fill="none" stroke="rgba(31,50,87,0.06)" stroke-width="1"/>
-            <path d="M82 140 344 140" fill="none" stroke="rgba(31,50,87,0.06)" stroke-width="1"/>
-            <path d="M207 26c-5 18-6 39-5 58 1 20 3 42 3 62 0 18-2 37-4 55-2 13-4 25-3 37" fill="none" stroke="rgba(30,77,157,0.24)" stroke-width="4.6" stroke-linecap="round"/>
-            <path d="M214 28c-5 18-6 38-5 57 1 20 3 41 3 61 0 18-2 36-4 53-2 13-4 24-4 35" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.15" stroke-linecap="round"/>
-            <path d="M158 68c8 2 18 5 30 4 10 0 18-3 28-6" fill="none" stroke="rgba(32,58,104,0.12)" stroke-width="1"/>
-            <path d="M147 108c10 4 22 6 34 4 12-2 21-6 31-11" fill="none" stroke="rgba(32,58,104,0.12)" stroke-width="1"/>
-            <path d="M148 146c8 3 18 5 28 4 14-1 26-6 38-14" fill="none" stroke="rgba(32,58,104,0.12)" stroke-width="1"/>
-            <path d="M168 182c8 2 18 3 28 1 11-2 22-8 31-15" fill="none" stroke="rgba(32,58,104,0.12)" stroke-width="1"/>
-            <path d="M134 64c18 12 26 27 25 46-1 18-10 35-14 52-4 18 0 35 13 47 14 13 36 18 60 15 22-3 41-12 58-27 18-17 31-38 41-62" fill="none" stroke="rgba(22,78,181,0.3)" stroke-width="4" stroke-linecap="round"/>
-            <g class="auth-map-pin auth-map-pin--critical">
-              <circle cx="165" cy="112" r="16" fill="rgba(167,28,37,0.08)" />
-              <circle cx="165" cy="112" r="12" fill="rgba(167,28,37,0.14)" />
-              <circle cx="165" cy="112" r="6" fill="#a71c25" />
-              <path d="M165 96v-12" fill="none" stroke="rgba(167,28,37,0.28)" stroke-width="1.2" stroke-dasharray="3 3"/>
-              <text x="179" y="108">Alerta Foto</text>
-              <text x="179" y="122">Guayabal</text>
-            </g>
-            <g class="auth-map-pin auth-map-pin--warning">
-              <circle cx="227" cy="86" r="16" fill="rgba(22,78,181,0.08)" />
-              <circle cx="227" cy="86" r="12" fill="rgba(22,78,181,0.14)" />
-              <circle cx="227" cy="86" r="6" fill="#1b4ca1" />
-              <path d="M227 70v-12" fill="none" stroke="rgba(22,78,181,0.28)" stroke-width="1.2" stroke-dasharray="3 3"/>
-              <text x="241" y="82">Clon concesionario</text>
-              <text x="241" y="96">Bello</text>
-            </g>
-            <g class="auth-map-pin auth-map-pin--critical">
-              <circle cx="255" cy="148" r="16" fill="rgba(167,28,37,0.08)" />
-              <circle cx="255" cy="148" r="12" fill="rgba(167,28,37,0.14)" />
-              <circle cx="255" cy="148" r="6" fill="#a71c25" />
-              <path d="M255 132v-12" fill="none" stroke="rgba(167,28,37,0.28)" stroke-width="1.2" stroke-dasharray="3 3"/>
-              <text x="269" y="144">Foto Phishing</text>
-              <text x="269" y="158">Itagui</text>
-            </g>
-            <g class="auth-map-pin auth-map-pin--official">
-              <circle cx="198" cy="156" r="14" fill="rgba(23,96,64,0.08)" />
-              <circle cx="198" cy="156" r="10" fill="rgba(23,96,64,0.14)" />
-              <circle cx="198" cy="156" r="5" fill="#1e6d50" />
-              <text x="142" y="186">Punto sede oficial</text>
-              <text x="142" y="200">clonado</text>
-            </g>
-            <text x="24" y="28" class="auth-map-caption">Cartografia · Valle de Aburra</text>
-            <text x="26" y="48" class="auth-map-caption auth-map-caption--muted">Bello</text>
-            <text x="28" y="126" class="auth-map-caption auth-map-caption--muted">Medellin</text>
-            <text x="30" y="212" class="auth-map-caption auth-map-caption--muted">Itagui</text>
-            <text x="215" y="36" class="auth-map-caption auth-map-caption--river">Rio Medellin</text>
-            <text x="302" y="218" class="auth-map-caption auth-map-caption--muted">Monitoreo publico</text>
-          </svg>
-        </div>
-        <div class="auth-pulse-stats">
-          <article class="auth-pulse-stat auth-pulse-stat--critical">
-            <span class="auth-pulse-stat-mark" aria-hidden="true">🚨</span>
-            <div>
-              <strong>12</strong>
-              <span>alertas activas</span>
-            </div>
+
+        <h2>
+          Detección automática de fotos maliciosas, clonación de puntos y phishing
+          en Google Maps para la red de concesionarios Yamaha.
+        </h2>
+
+        <div class="auth-atlas-metrics" aria-label="Estado de la red">
+          <article>
+            <span class="auth-atlas-metric-icon auth-atlas-metric-icon--alert" aria-hidden="true"></span>
+            <strong>12</strong>
+            <p><b>alertas activas</b><small>requieren revisión</small></p>
           </article>
-          <article class="auth-pulse-stat auth-pulse-stat--watch">
-            <span class="auth-pulse-stat-mark" aria-hidden="true">🛰️</span>
-            <div>
-              <strong>26</strong>
-              <span>sedes vigiladas</span>
-            </div>
+          <article>
+            <span class="auth-atlas-metric-icon auth-atlas-metric-icon--watch" aria-hidden="true"></span>
+            <strong>26</strong>
+            <p><b>sedes vigiladas</b><small>con monitoreo activo</small></p>
           </article>
-          <article class="auth-pulse-stat auth-pulse-stat--priority">
-            <span class="auth-pulse-stat-mark" aria-hidden="true">🔥</span>
-            <div>
-              <strong>5</strong>
-              <span>casos criticos</span>
-            </div>
+          <article>
+            <span class="auth-atlas-metric-icon auth-atlas-metric-icon--critical" aria-hidden="true"></span>
+            <strong>5</strong>
+            <p><b>casos críticos</b><small>alta prioridad</small></p>
           </article>
         </div>
-      </section>
+
+        <span class="auth-atlas-version">v1.0</span>
+      </div>
+
+      <div class="auth-atlas-places" aria-hidden="true">
+        <span class="auth-atlas-city auth-atlas-city--bello">Bello</span>
+        <span class="auth-atlas-city auth-atlas-city--medellin">Medellín</span>
+        <span class="auth-atlas-city auth-atlas-city--itagui">Itagüí</span>
+        <span class="auth-atlas-city auth-atlas-city--envigado">Envigado</span>
+
+        <span class="auth-atlas-alert auth-atlas-alert--bello">
+          <i class="auth-atlas-alert-symbol auth-atlas-alert-symbol--triangle"></i>
+          Clon concesionario Bello
+        </span>
+        <span class="auth-atlas-alert auth-atlas-alert--guayabal">
+          <i class="auth-atlas-alert-symbol"></i>
+          Alerta Foto Guayabal
+        </span>
+        <span class="auth-atlas-alert auth-atlas-alert--itagui">
+          <i class="auth-atlas-alert-symbol"></i>
+          Foto Phishing Itagüí
+        </span>
+        <span class="auth-atlas-alert auth-atlas-alert--official">
+          <i class="auth-atlas-alert-symbol auth-atlas-alert-symbol--triangle"></i>
+          Punto Sede Oficial Clonado
+        </span>
+      </div>
     </aside>
 
-    <section class="auth-card auth-card--elevated">
-      <div class="auth-card-head">
-        <span class="panel-kicker">Acceso seguro</span>
-        <h2>Elige cómo entrar.</h2>
-        <p>Usa tu cuenta de Google de negocio para conectar Google Business Profile (GBP) o usa tu correo y contraseña para operar.</p>
+    <section class="auth-card auth-card--elevated auth-card--atlas">
+      <div class="auth-card-head auth-card-head--atlas">
+        <div class="auth-secure-title">
+          <span aria-hidden="true">✣</span>
+          <h1>Acceso seguro</h1>
+        </div>
+        <p>
+          Usa tu cuenta de Google de negocio para conectar Google Business Profile
+          (GBP) o usa tu correo y contraseña para operar.
+        </p>
       </div>
 
-      <div class="auth-choice-strip">
-        <article>
-          <span class="auth-choice-icon" aria-hidden="true">🔗</span>
-          <strong>Usa Google</strong>
-          <span>Para conectar GBP.</span>
-        </article>
-        <article>
-          <span class="auth-choice-icon" aria-hidden="true">🔐</span>
-          <strong>Usa correo y contraseña</strong>
-          <span>Para entrar con acceso existente.</span>
-        </article>
-      </div>
+      <a class="auth-oauth-button auth-oauth-button--atlas" href="/auth/google/start">
+        <span class="auth-oauth-g" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img" focusable="false">
+            <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5Z"/>
+            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.4 4.3-17.7 10.7Z"/>
+            <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.5-5.2l-6.2-5.2c-2.1 1.6-4.7 2.4-7.3 2.4-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.5 39.5 16.2 44 24 44Z"/>
+            <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.8-2.8 4.9-4.9 6.4l.1-.1 6.2 5.2C36.2 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5Z"/>
+          </svg>
+        </span>
+        <span>Continuar con Google</span>
+      </a>
 
-      <div class="auth-inline-note">
-        <span class="auth-inline-dot" aria-hidden="true"></span>
-        <span>Acceso seguro para operar y conectar el perfil oficial del negocio.</span>
-      </div>
+      <div class="auth-divider auth-divider--atlas"><span>o</span></div>
 
-      <div class="auth-primary-actions">
-        <a class="auth-oauth-button" href="/auth/google/start">
-          <span class="auth-oauth-g" aria-hidden="true">
-            <svg viewBox="0 0 48 48" role="img" focusable="false">
-              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5Z"/>
-              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.4 4.3-17.7 10.7Z"/>
-              <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.5-5.2l-6.2-5.2c-2.1 1.6-4.7 2.4-7.3 2.4-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.5 39.5 16.2 44 24 44Z"/>
-              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.8-2.8 4.9-4.9 6.4l.1-.1 6.2 5.2C36.2 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5Z"/>
-            </svg>
-          </span>
-          <span>Continuar con Google</span>
-          <small>Recomendado para GBP</small>
-        </a>
-      </div>
-
-      <div class="auth-divider">
-        <span>o continúa con correo y contraseña</span>
-      </div>
-
-      <form method="post" action="/auth/login" class="auth-form auth-form--polished">
+      <form method="post" action="/auth/login" class="auth-form auth-form--polished auth-form--atlas">
         <label>
-          <span>Correo</span>
-          <input type="email" name="email" placeholder="tu-correo@empresa.com" required />
+          <span>Correo electrónico</span>
+          <span class="auth-input-shell">
+            <i aria-hidden="true">✉</i>
+            <input type="email" name="email" placeholder="Correo electrónico" required />
+          </span>
         </label>
         <label>
           <span>Contraseña</span>
-          <input type="password" name="password" placeholder="••••••••" required />
+          <span class="auth-input-shell">
+            <i aria-hidden="true">⌑</i>
+            <input type="password" name="password" placeholder="Contraseña" required />
+          </span>
         </label>
-        <button type="submit">Entrar a Vigilante</button>
+        <button type="submit">Iniciar sesión</button>
       </form>
 
-      <div class="auth-links auth-links--stacked">
-        <a href="/register">Crear organización de concesionario</a>
-        <span>Unete a la red de proteccion contra suplantacion de identidad. Haz clic aqui para enlazar tu perfil oficial de Google Business de forma segura y comenzar el monitoreo automatico de tu concesionario.</span>
+      <div class="auth-onboarding-note">
+        <span class="auth-onboarding-shield" aria-hidden="true">♢</span>
+        <p>
+          Únete a la red de protección contra suplantación de identidad.
+          <a href="/register">Haz clic aquí</a> para enlazar tu perfil oficial de
+          Google Business de forma segura y comenzar el monitoreo automático de tu
+          concesionario.
+        </p>
       </div>
     </section>
   </section>
