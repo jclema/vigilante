@@ -23,6 +23,14 @@ def _login(client: TestClient, email: str = "operator@vigilante.local", password
     assert response.status_code == 303
 
 
+def test_login_atlas_asset_is_served_as_webp():
+    with TestClient(app) as client:
+        response = client.get("/static/medellin-atlas-login.webp")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/webp"
+
+
 def test_dashboard_sections_have_expected_shape():
     repo = InMemoryRepository()
     repo.seed()

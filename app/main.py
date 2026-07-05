@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import mimetypes
 from pathlib import Path
 from urllib.parse import quote, urlencode
 import re
@@ -75,6 +76,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=settings.session_secret, same_site="lax")
+mimetypes.add_type("image/webp", ".webp")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 
