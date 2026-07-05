@@ -282,8 +282,16 @@ class DashboardService:
         cases = self._active_cases()
         by_status = Counter(case.status for case in cases)
         by_source = Counter(case.source_type for case in cases)
-        primary_cases = [case for case in cases if case.risk_bucket != RiskBucket.HIGH_RISK_WATCHLIST]
-        watchlist_cases = [case for case in cases if case.risk_bucket == RiskBucket.HIGH_RISK_WATCHLIST]
+        primary_cases = sorted(
+            [case for case in cases if case.risk_bucket != RiskBucket.HIGH_RISK_WATCHLIST],
+            key=lambda item: (item.risk_score, item.updated_at),
+            reverse=True,
+        )
+        watchlist_cases = sorted(
+            [case for case in cases if case.risk_bucket == RiskBucket.HIGH_RISK_WATCHLIST],
+            key=lambda item: (item.risk_score, item.updated_at),
+            reverse=True,
+        )
         archived_cases = sorted(
             [case for case in all_cases if case.status == CaseStatus.DISMISSED],
             key=lambda item: item.updated_at,

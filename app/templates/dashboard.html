@@ -35,134 +35,208 @@
   </aside>
 
   <main id="main-content" class="main" tabindex="-1">
-    <section id="command-panel" class="hero-board hero-board--command section">
-      <div class="hero-copy">
-        <div class="hero-kicker">Comando operacional</div>
-        <h1>Resumen de la operación en tiempo real.</h1>
-        <p>
-          Alertas activas, territorio y seguimiento en una sola vista para decidir más rápido.
-        </p>
-        <div class="hero-actions">
-          <a class="hero-link" href="#threats-feed">Abrir feed crítico</a>
-          <a class="hero-link secondary" href="#map-panel" data-panel-link="map-panel">Ver mapa</a>
+    <section id="command-panel" class="command-center section">
+      <header class="command-center-header">
+        <div class="command-center-title">
+          <span class="panel-kicker">Comando operacional</span>
+          <h1>Estado actual de alertas</h1>
+          <p>Prioridad, ubicación y siguiente acción en una sola vista.</p>
         </div>
-      </div>
-
-      <aside class="executive-feature executive-feature--summarycard command-summary-card" aria-label="Resumen actual de la red">
-        <div class="command-summary-head">
-          <span>📌 Pulso actual</span>
-          <strong>{{ sections.executive.summary_lead.value }}</strong>
-          <p>{{ sections.executive.summary_lead.context }}</p>
-        </div>
-        <div class="command-summary-grid">
-          {% for item in sections.executive.highlights[:3] %}
-          <article class="command-summary-item {% if loop.index == 1 %}is-critical{% endif %}">
-            <span>{{ item.emoji }} {{ item.label }}</span>
-            <strong>{{ item.value }}</strong>
-            <small>{{ item.context }}</small>
+        <div class="command-center-metrics" aria-label="Pulso actual de la red">
+          <article>
+            <i class="command-metric-mark command-metric-mark--critical" aria-hidden="true"></i>
+            <strong>{{ sections.executive.highlights[0].value }}</strong>
+            <span>alertas activas</span>
           </article>
-          {% endfor %}
+          <article>
+            <i class="command-metric-mark command-metric-mark--watch" aria-hidden="true"></i>
+            <strong>{{ sections.executive.headline.coverage.split(' ')[0] }}</strong>
+            <span>sedes vigiladas</span>
+          </article>
+          <article>
+            <i class="command-metric-mark command-metric-mark--critical" aria-hidden="true"></i>
+            <strong>{{ sections.executive.ribbon[0].value }}</strong>
+            <span>casos críticos</span>
+          </article>
+          <article>
+            <i class="command-metric-mark command-metric-mark--coverage" aria-hidden="true"></i>
+            <strong>{{ sections.executive.top_metrics[0].value }}</strong>
+            <span>salud de red</span>
+          </article>
         </div>
-      </aside>
-    </section>
+        <div class="command-center-updated">
+          <span>Último barrido</span>
+          <strong>{{ sections.operations.summary.latest_scan_time }}</strong>
+        </div>
+      </header>
 
-    <section id="threats-feed" class="critical-feed critical-feed--below">
-      <div class="feed-head feed-head--critical">
-        <div>
-          <span class="panel-kicker">Feed crítico</span>
-          <h2>Casos para revisar ahora</h2>
-        </div>
-        <small>Empieza aquí. El resto del tablero solo añade contexto.</small>
-      </div>
-
-      <section class="threat-filters" data-threat-filters>
-        <div class="filter-copy">
-          <span class="panel-kicker">Filtros</span>
-          <div class="filter-summary" data-filter-summary>Mostrando todas las alertas activas.</div>
-        </div>
-        <div class="filter-controls">
-          <label>
-            <span>Ciudad</span>
-            <select data-filter-city>
-              <option value="all">Todas</option>
-              {% for city in sections.threats.filters.cities %}
-              <option value="{{ city }}">{{ city }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label>
-            <span>Estado</span>
-            <select data-filter-status>
-              <option value="all">Todos</option>
-              {% for status in sections.threats.filters.statuses %}
-              <option value="{{ status }}">{{ status }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label>
-            <span>Prioridad</span>
-            <select data-filter-priority>
-              <option value="all">Todas</option>
-              {% for priority in sections.threats.filters.priorities %}
-              <option value="{{ priority }}">{{ priority }}</option>
-              {% endfor %}
-            </select>
-          </label>
-        </div>
-      </section>
-
-      <div class="threat-list threat-list--compact" data-threat-list>
-        {% for card in sections.threats.cards %}
-        {% set case = card.case %}
-        {% if case.status != 'dismissed' %}
-        <article class="threat-row threat-row--compact {{ card.visual_tone }}" data-case-row data-city="{{ card.city }}" data-status="{{ card.case_status_label }}" data-priority="{{ card.priority_label }}" data-case-id="{{ case.id }}" data-focus-dealer="{{ card.dealer_id }}" data-mode="{{ card.monitoring_mode_label|lower }}" data-has-alert="true" data-title="{{ case.title }}" data-recommended-action="{{ card.recommended_action }}" data-risk="{{ case.risk_score }}" data-maps-link="{{ card.maps_link or '' }}">
-          <div class="threat-main">
-            <div class="threat-card-topline">
-              <div class="threat-pills">
-                <span class="threat-pill is-priority {{ card.visual_tone }}">{% if card.visual_tone == "risk-critical" %}🚨 {% elif card.visual_tone == "risk-high" %}🔶 {% elif card.visual_tone == "risk-medium" %}👀 {% else %}✅ {% endif %}{{ card.priority_label }}</span>
-                <span class="threat-pill is-source risk-bucket-pill risk-bucket-pill--{{ card.risk_bucket_tone }}">🧭 {{ card.risk_bucket_label }}</span>
+      <div class="command-center-grid">
+        <section id="threats-feed" class="command-alerts" aria-label="Alertas activas">
+          <div class="command-panel-head">
+            <div>
+              <h2>Alertas activas</h2>
+              <span class="command-count">{{ sections.executive.highlights[0].value }}</span>
+            </div>
+            <details class="command-filter-menu">
+              <summary>Filtrar</summary>
+              <div class="command-filter-popover">
+                <label>
+                  <span>Ciudad</span>
+                  <select data-filter-city>
+                    <option value="all">Todas</option>
+                    {% for city in sections.threats.filters.cities %}
+                    <option value="{{ city }}">{{ city }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label>
+                  <span>Estado</span>
+                  <select data-filter-status>
+                    <option value="all">Todos</option>
+                    {% for status in sections.threats.filters.statuses %}
+                    <option value="{{ status }}">{{ status }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label>
+                  <span>Prioridad</span>
+                  <select data-filter-priority>
+                    <option value="all">Todas</option>
+                    {% for priority in sections.threats.filters.priorities %}
+                    <option value="{{ priority }}">{{ priority }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
               </div>
-            </div>
-            <div class="threat-title">{{ case.title }}</div>
-            <div class="threat-meta">🏍️ {{ case.dealer_name }} · 📍 {{ card.city }}</div>
-            <div class="threat-meta threat-meta--subtle">🕒 Identificado: {{ card.identified_at }}</div>
-            {% if card.risk_bucket_tone == "clone" and card.observed_name %}
-            <div class="threat-callout threat-callout--suspect">
-              <span class="callout-label">🧾 Nombre usado por el punto sospechoso</span>
-              <strong>{{ card.observed_name }}</strong>
-            </div>
+            </details>
+          </div>
+          <div class="command-filter-summary" data-filter-summary>Ordenadas por riesgo.</div>
+
+          <div class="command-alert-list" data-threat-list>
+            {% for card in sections.threats.cards %}
+            {% set case = card.case %}
+            {% if case.status != 'dismissed' %}
+            <button
+              type="button"
+              class="command-alert-row {{ card.visual_tone }} {% if loop.first %}is-selected{% endif %}"
+              data-case-row
+              data-command-alert
+              data-city="{{ card.city }}"
+              data-status="{{ card.case_status_label }}"
+              data-priority="{{ card.priority_label }}"
+              data-case-id="{{ case.id }}"
+              data-focus-dealer="{{ card.dealer_id }}"
+              data-mode="{{ card.monitoring_mode_label|lower }}"
+              data-has-alert="true"
+              data-title="{{ case.title }}"
+              data-dealer="{{ case.dealer_name }}"
+              data-source="{{ card.source_label }}"
+              data-source-tone="{{ card.risk_bucket_tone }}"
+              data-recommended-action="{{ card.recommended_action }}"
+              data-risk="{{ case.risk_score }}"
+              data-identified="{{ card.identified_at }}"
+              data-maps-link="{{ card.maps_link or '' }}"
+              data-media-url="{{ card.media.url if card.media else '' }}"
+            >
+              <span class="command-alert-visual">
+                {% if card.media %}
+                <img src="{{ card.media.url }}" alt="" loading="lazy" />
+                {% else %}
+                <span aria-hidden="true">{% if card.risk_bucket_tone == 'clone' %}📍{% else %}🖼️{% endif %}</span>
+                {% endif %}
+              </span>
+              <span class="command-alert-copy">
+                <span class="command-alert-type">{{ card.source_label }}</span>
+                <strong>{{ case.title }}</strong>
+                <small>{{ case.dealer_name }} · {{ card.city }}</small>
+                <em>{{ card.identified_at }}</em>
+              </span>
+              <span class="command-alert-risk">
+                <strong>{{ case.risk_score }}</strong>
+                <small>{{ card.priority_label }}</small>
+              </span>
+            </button>
             {% endif %}
-            <div class="threat-callout">
-              <span class="callout-label">🎯 Siguiente mejor acción</span>
-              <strong>{{ card.recommended_action }}</strong>
-              <small>🧭 {{ card.case_status_label }} · 📨 {{ card.google_status_label }}</small>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section class="command-map-panel" aria-label="Mapa operacional de alertas">
+          <div class="command-panel-head command-map-head">
+            <div>
+              <h2>Territorio</h2>
+              <p>Medellín y Valle de Aburrá</p>
             </div>
-            <div class="threat-card-footnote">
-              <span>🔎 El detalle completo, la evidencia y el contraste oficial quedan dentro del expediente.</span>
+            <div class="command-map-mode"><span>Solo alertas</span></div>
+          </div>
+          <div class="command-cartography">
+            <img src="/static/medellin-atlas-login.webp" alt="" aria-hidden="true" />
+            <span class="command-map-city command-map-city--bello">Bello</span>
+            <span class="command-map-city command-map-city--medellin">Medellín</span>
+            <span class="command-map-city command-map-city--itagui">Itagüí</span>
+            <span class="command-map-city command-map-city--envigado">Envigado</span>
+            {% for card in sections.threats.cards %}
+            {% if card.case.status != 'dismissed' %}
+            <button
+              type="button"
+              class="command-map-marker {{ card.visual_tone }} command-map-marker--{{ loop.index }}"
+              data-command-map-marker
+              data-command-case-id="{{ card.case.id }}"
+              aria-label="Seleccionar {{ card.case.title }}"
+              title="{{ card.case.title }}"
+            ><span></span></button>
+            {% endif %}
+            {% endfor %}
+          </div>
+          <div class="command-map-legend">
+            <span><i class="is-critical"></i> Riesgo crítico</span>
+            <span><i class="is-medium"></i> Riesgo medio</span>
+            <span><i class="is-watch"></i> Seguimiento</span>
+          </div>
+        </section>
+
+        {% if spotlight %}
+        <aside class="command-selected" data-command-selected>
+          <div class="command-panel-head">
+            <div>
+              <span class="panel-kicker">Caso seleccionado</span>
+              <h2 data-command-selected-id>{{ spotlight.case.id }}</h2>
             </div>
-            <div class="threat-inline-actions">
-              {% if card.maps_link %}
-              <a class="mini-link" href="{{ card.maps_link }}">📍 Clon</a>
+            <span class="command-selected-type" data-command-selected-source>{{ spotlight.source_label }}</span>
+          </div>
+          <div class="command-selected-identity">
+            <div class="command-selected-media" data-command-selected-media>
+              {% if spotlight.media %}
+              <img src="{{ spotlight.media.url }}" alt="{{ spotlight.media.caption }}" />
+              {% else %}
+              <span aria-hidden="true">🛡️</span>
               {% endif %}
-              {% if card.dealer_maps_link %}
-              <a class="mini-link" href="{{ card.dealer_maps_link }}">🏍️ Oficial</a>
+            </div>
+            <div>
+              <h3 data-command-selected-dealer>{{ spotlight.case.dealer_name }}</h3>
+              <p data-command-selected-title>{{ spotlight.case.title }}</p>
+              <small data-command-selected-city>{{ spotlight.city }} · {{ spotlight.identified_at }}</small>
+              {% if spotlight.maps_link %}
+              <a href="{{ spotlight.maps_link }}" data-command-selected-maps>Ver en Google Maps ↗</a>
+              {% else %}
+              <a href="#" data-command-selected-maps hidden>Ver en Google Maps ↗</a>
               {% endif %}
-              <a class="case-link" href="/cases/{{ case.id }}">Abrir expediente</a>
             </div>
           </div>
-          <div class="threat-side">
-            <div class="score-wrap">
-              <div class="score">{{ case.risk_score }}</div>
-              <div class="score-label">Índice de riesgo <span class="tooltip-chip" tabindex="0" title="Puntaje de prioridad calculado por Vigilante. Un número más alto indica mayor urgencia de revisión.">?</span></div>
+          <div class="command-confidence">
+            <div>
+              <span>Confianza del sistema</span>
+              <strong data-command-selected-risk>{{ spotlight.case.risk_score }}%</strong>
             </div>
-            <div class="threat-side-meta">
-              <strong>{{ card.priority_label }}</strong>
-              <span>{{ card.city }}</span>
-            </div>
+            <div class="command-confidence-track"><span data-command-selected-risk-bar style="width: {{ spotlight.case.risk_score }}%"></span></div>
           </div>
-        </article>
+          <div class="command-next-action">
+            <span>Siguiente acción</span>
+            <strong data-command-selected-action>{{ spotlight.recommended_action }}</strong>
+          </div>
+          <a class="command-open-case" href="/cases/{{ spotlight.case.id }}" data-command-selected-href>Abrir expediente</a>
+        </aside>
         {% endif %}
-        {% endfor %}
       </div>
     </section>
 
@@ -646,6 +720,72 @@
     const mapContextMode = document.querySelector("[data-map-context-mode]");
     const mapContextPrimary = document.querySelector("[data-map-context-primary]");
     const mapContextSecondary = document.querySelector("[data-map-context-secondary]");
+    const commandAlerts = Array.from(document.querySelectorAll("[data-command-alert]"));
+    const commandMarkers = Array.from(document.querySelectorAll("[data-command-map-marker]"));
+    const commandSelectedId = document.querySelector("[data-command-selected-id]");
+    const commandSelectedSource = document.querySelector("[data-command-selected-source]");
+    const commandSelectedDealer = document.querySelector("[data-command-selected-dealer]");
+    const commandSelectedTitle = document.querySelector("[data-command-selected-title]");
+    const commandSelectedCity = document.querySelector("[data-command-selected-city]");
+    const commandSelectedMaps = document.querySelector("[data-command-selected-maps]");
+    const commandSelectedMedia = document.querySelector("[data-command-selected-media]");
+    const commandSelectedRisk = document.querySelector("[data-command-selected-risk]");
+    const commandSelectedRiskBar = document.querySelector("[data-command-selected-risk-bar]");
+    const commandSelectedAction = document.querySelector("[data-command-selected-action]");
+    const commandSelectedHref = document.querySelector("[data-command-selected-href]");
+
+    const selectCommandCase = (row) => {
+      if (!row) return;
+      const caseId = row.dataset.caseId;
+      commandAlerts.forEach((item) => {
+        const selected = item === row;
+        item.classList.toggle("is-selected", selected);
+        item.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+      commandMarkers.forEach((marker) => {
+        marker.classList.toggle("is-selected", marker.dataset.commandCaseId === caseId);
+      });
+      if (commandSelectedId) commandSelectedId.textContent = caseId;
+      if (commandSelectedSource) commandSelectedSource.textContent = row.dataset.source;
+      if (commandSelectedDealer) commandSelectedDealer.textContent = row.dataset.dealer;
+      if (commandSelectedTitle) commandSelectedTitle.textContent = row.dataset.title;
+      if (commandSelectedCity) commandSelectedCity.textContent = `${row.dataset.city} · ${row.dataset.identified}`;
+      if (commandSelectedRisk) commandSelectedRisk.textContent = `${row.dataset.risk}%`;
+      if (commandSelectedRiskBar) commandSelectedRiskBar.style.width = `${row.dataset.risk}%`;
+      if (commandSelectedAction) commandSelectedAction.textContent = row.dataset.recommendedAction;
+      if (commandSelectedHref) commandSelectedHref.href = `/cases/${caseId}`;
+      if (commandSelectedMaps) {
+        commandSelectedMaps.hidden = !row.dataset.mapsLink;
+        if (row.dataset.mapsLink) commandSelectedMaps.href = row.dataset.mapsLink;
+      }
+      if (commandSelectedMedia) {
+        commandSelectedMedia.replaceChildren();
+        if (row.dataset.mediaUrl) {
+          const image = document.createElement("img");
+          image.src = row.dataset.mediaUrl;
+          image.alt = "";
+          commandSelectedMedia.append(image);
+        } else {
+          const fallback = document.createElement("span");
+          fallback.setAttribute("aria-hidden", "true");
+          fallback.textContent = row.dataset.sourceTone === "clone" ? "📍" : "🛡️";
+          commandSelectedMedia.append(fallback);
+        }
+      }
+    };
+
+    commandAlerts.forEach((row) => {
+      row.addEventListener("click", () => selectCommandCase(row));
+    });
+    commandMarkers.forEach((marker) => {
+      marker.addEventListener("click", () => {
+        const row = commandAlerts.find((item) => item.dataset.caseId === marker.dataset.commandCaseId);
+        if (!row) return;
+        selectCommandCase(row);
+        focusDealer(row.dataset.focusDealer);
+      });
+    });
+    selectCommandCase(commandAlerts.find((row) => row.classList.contains("is-selected")) || commandAlerts[0]);
 
     const markCurrentSection = (panelId) => {
       sidebarNavLinks.forEach((link) => {
@@ -871,6 +1011,11 @@
         filterSummary.textContent = segments.length
           ? `Mostrando ${visible} amenaza${visible === 1 ? "" : "s"} para ${segments.join(" · ")}.`
           : `Mostrando ${visible} amenaza${visible === 1 ? "" : "s"} activas en toda la red.`;
+      }
+
+      const selectedCommandAlert = commandAlerts.find((row) => row.classList.contains("is-selected"));
+      if (!selectedCommandAlert || selectedCommandAlert.hidden) {
+        selectCommandCase(commandAlerts.find((row) => !row.hidden));
       }
 
       if (scrollToThreat && threatList) {

@@ -53,6 +53,19 @@ def test_dashboard_sections_have_expected_shape():
     assert len(sections["threats"]["filters"]["cities"]) >= 1
 
 
+def test_command_alerts_are_sorted_by_risk():
+    repo = InMemoryRepository()
+    repo.seed()
+    scout = ScoutAgent(repo, ForensicAgent())
+    scout.run_public_scan("yamaha medellin", suspicious_places())
+    scout.process_gbp_event(suspicious_assets()[0])
+
+    cards = DashboardService(repo).threat_summary()["cards"]
+    scores = [card["case"].risk_score for card in cards]
+
+    assert scores == sorted(scores, reverse=True)
+
+
 def test_public_scan_endpoint_accepts_trusted_cloud_scheduler_headers():
     repo = app_repository
     repo.seed()
@@ -340,19 +353,20 @@ def test_archived_case_keeps_dismissed_status_suggestion_and_shows_in_archived_c
 
 
 def test_dashboard_page_renders_territory_story():
-    client = TestClient(app)
-    _login(client)
-    response = client.get("/")
+    with TestClient(app) as client:
+        _login(client)
+        response = client.get("/")
 
     assert response.status_code == 200
     assert "Territorio" in response.text
     assert "Valle de Aburrá" in response.text
     assert "Abrir expediente" in response.text
     assert "Barrido público" in response.text
-    assert "Feed crítico" in response.text
-    assert "Casos para revisar ahora" in response.text
-    assert "Índice de riesgo" in response.text
-    assert "Filtros" in response.text
+    assert "Estado actual de alertas" in response.text
+    assert "Caso seleccionado" in response.text
+    assert "Alertas activas" in response.text
+    assert "Confianza del sistema" in response.text
+    assert "Filtrar" in response.text
     assert "Contrastar con sedes oficiales" in response.text
     assert "Punto en foco" in response.text
 
