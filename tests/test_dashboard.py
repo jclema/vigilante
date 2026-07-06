@@ -358,6 +358,7 @@ def test_dashboard_page_renders_territory_story():
         response = client.get("/")
 
     assert response.status_code == 200
+    assert '/static/styles.css?v=' in response.text
     assert "Territorio" in response.text
     assert "Valle de Aburrá" in response.text
     assert "Abrir expediente" in response.text

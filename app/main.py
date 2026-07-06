@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import hashlib
 import mimetypes
 from pathlib import Path
 from time import monotonic
@@ -52,6 +53,7 @@ from app.store import repository
 
 
 BASE_DIR = Path(__file__).resolve().parent
+ASSET_VERSION = hashlib.sha256((BASE_DIR / "static" / "styles.css").read_bytes()).hexdigest()[:12]
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 login_attempts: dict[str, list[float]] = {}
 
@@ -281,6 +283,7 @@ def _base_context(request: Request) -> dict[str, object]:
     active_org = repository.get_organization(actor.active_organization_id) if actor and actor.active_organization_id else None
     return {
         "app_name": settings.app_name,
+        "asset_version": ASSET_VERSION,
         "current_actor": actor,
         "active_organization": active_org,
     }
