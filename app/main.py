@@ -48,6 +48,7 @@ from app.services.evidence_media import EvidenceMediaService
 from app.services.gbp_media import GbpCustomerMediaClient, GbpCustomerMediaIngestService, GbpOrganizationConnectionResolver
 from app.services.multi_source_ingest import EvidenceIngestionRequest, MultiSourceEvidenceIngestService
 from app.services.notifications import NotificationService
+from app.services.organization_resolution import resolve_case_organization_id
 from app.services.places import places_search_service
 from app.store import repository
 
@@ -903,7 +904,7 @@ async def settings_page(request: Request) -> HTMLResponse:
     selected_dealer_rows = []
     if selected_org_id:
         selected_dealers = sorted(
-            [dealer for dealer in repository.dealers.values() if dealer.organization_id == selected_org_id],
+            [dealer for dealer in all_dealers if dealer.organization_id == selected_org_id],
             key=lambda item: item.name.lower(),
         )
         profiles_by_dealer = {profile.dealer_id: profile for profile in profiles_for_selected_org}
@@ -928,11 +929,9 @@ async def settings_page(request: Request) -> HTMLResponse:
     selected_cases_for_org = []
     customer_media_summary = _customer_media_summary_for_organization(selected_org_id)
     if selected_org_id:
+        dealers_by_id = {dealer.id: dealer for dealer in all_dealers}
         for case in repository.list_cases():
-            case_org_id = case.organization_id
-            if not case_org_id and case.dealer_id:
-                dealer = repository.dealers.get(case.dealer_id)
-                case_org_id = dealer.organization_id if dealer else None
+            case_org_id = resolve_case_organization_id(case, dealers_by_id)
             if case_org_id == selected_org_id:
                 selected_cases_for_org.append(case)
         selected_cases_for_org.sort(key=lambda item: (item.status.value, -item.risk_score))

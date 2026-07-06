@@ -12,6 +12,7 @@ from app.services.auth import AuthService
 from app.services.dashboard import DashboardService
 import app.services.dashboard as dashboard_module
 from app.services.demo_data import suspicious_assets, suspicious_places
+from app.services.organization_resolution import resolve_case_organization_id
 from app.store import InMemoryRepository, repository as app_repository
 
 
@@ -65,6 +66,65 @@ def test_command_alerts_are_sorted_by_risk():
     scores = [card["case"].risk_score for card in cards]
 
     assert scores == sorted(scores, reverse=True)
+
+
+def test_legacy_motoblu_itagui_case_resolves_to_motoblu_organization():
+    repo = InMemoryRepository()
+    repo.seed()
+    repo.save_organization(Organization(id="org-motoblu", name="Motoblu", organization_type=OrganizationType.DEALER))
+    canonical = repo.dealers["dealer-itagui"].model_copy(update={"organization_id": "org-motoblu"})
+    repo._dealers[canonical.id] = canonical
+    legacy_case = ThreatCase(
+        id="case-legacy-itagui",
+        title="Posible clon de Motoblu Itagüí",
+        dealer_id="dealer-motoblu-itag",
+        organization_id=None,
+        dealer_name="Motoblu Itagüí",
+        city="Itagüí",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_score=100,
+        risk_reasons=["Dealer legacy sin organization_id."],
+        summary="Debe pertenecer a Motoblu.",
+        location_label="Itagüí",
+        source_reference_id="legacy-itagui",
+    )
+
+    assert resolve_case_organization_id(legacy_case, repo.dealers) == "org-motoblu"
+
+
+def test_motoblu_view_includes_legacy_itagui_cases_without_org_id():
+    repo = InMemoryRepository()
+    repo.seed()
+    repo.save_organization(Organization(id="org-motoblu", name="Motoblu", organization_type=OrganizationType.DEALER))
+    canonical = repo.dealers["dealer-itagui"].model_copy(update={"organization_id": "org-motoblu"})
+    repo._dealers[canonical.id] = canonical
+    user = repo.find_user_by_email("bello@motoblu.local")
+    assert user is not None
+    repo.save_membership(
+        repo.memberships["membership-bello-admin"].model_copy(update={"organization_id": "org-motoblu"})
+    )
+    legacy_case = ThreatCase(
+        id="case-legacy-itagui-visible",
+        title="Posible clon de Motoblu Itagüí",
+        dealer_id="dealer-motoblu-itag",
+        organization_id=None,
+        dealer_name="Motoblu Itagüí",
+        city="Itagüí",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_score=100,
+        risk_reasons=["Dealer legacy sin organization_id."],
+        summary="Debe aparecer en la vista Motoblu.",
+        location_label="Itagüí",
+        source_reference_id="legacy-itagui-visible",
+    )
+    repo.save_case(legacy_case)
+    actor = AuthService(repo)._actor_for_user(user.id, active_organization_id="org-motoblu")
+
+    cards = DashboardService(repo, actor).threat_summary()["cards"]
+
+    assert any(card["case"].id == "case-legacy-itagui-visible" for card in cards)
 
 
 def test_public_scan_endpoint_accepts_trusted_cloud_scheduler_headers():

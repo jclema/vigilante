@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from app.models import AuthorizedDealer, DealerProfile, EvidenceArtifact, ThreatCase
 from app.models import BrowserRun, BrowserSession
 from app.services.auth import ActorContext
+from app.services.organization_resolution import resolve_case_organization_id
 from app.store import Repository
 
 
@@ -16,6 +17,7 @@ class ScopedRepositoryView:
     _profiles_cache: dict[str, DealerProfile] | None = None
     _evidence_cache: dict[str, EvidenceArtifact] | None = None
     _cases_cache: list[ThreatCase] | None = None
+    _all_dealers_cache: dict[str, AuthorizedDealer] | None = None
     _jobs_cache: list | None = None
     _scans_cache: list | None = None
     _visible_org_ids_cache: set[str] | None | object = None
@@ -25,7 +27,7 @@ class ScopedRepositoryView:
         if self._dealers_cache is None:
             self._dealers_cache = {
                 dealer_id: dealer
-                for dealer_id, dealer in self.repository.dealers.items()
+                for dealer_id, dealer in self._all_dealers().items()
                 if self._can_see_organization(dealer.organization_id)
             }
         return self._dealers_cache
@@ -108,11 +110,16 @@ class ScopedRepositoryView:
         return self.repository.get_browser_session(organization_id)
 
     def _can_see_case(self, case: ThreatCase) -> bool:
-        return self._can_see_organization(case.organization_id or self._dealer_org_id(case.dealer_id))
+        return self._can_see_organization(resolve_case_organization_id(case, self._all_dealers()))
 
     def _dealer_org_id(self, dealer_id: str) -> str | None:
-        dealer = self.repository.dealers.get(dealer_id)
+        dealer = self._all_dealers().get(dealer_id)
         return dealer.organization_id if dealer else None
+
+    def _all_dealers(self) -> dict[str, AuthorizedDealer]:
+        if self._all_dealers_cache is None:
+            self._all_dealers_cache = self.repository.dealers
+        return self._all_dealers_cache
 
     def _can_see_organization(self, organization_id: str | None) -> bool:
         if self.actor is None:
