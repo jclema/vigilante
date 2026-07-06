@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 import mimetypes
 from pathlib import Path
+from time import monotonic
 from urllib.parse import quote, urlencode, urlsplit
 import re
 from urllib.error import HTTPError
@@ -52,6 +53,7 @@ from app.store import repository
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+login_attempts: dict[str, list[float]] = {}
 
 
 @asynccontextmanager
@@ -961,10 +963,27 @@ async def settings_page(request: Request) -> HTMLResponse:
 
 @app.post("/auth/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
+    normalized_email = email.strip().lower()
+    client_ip = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "unknown")
+    attempt_key = f"{client_ip}:{normalized_email}"
+    if settings.is_production:
+        now = monotonic()
+        cutoff = now - settings.login_rate_limit_window_seconds
+        recent_attempts = [attempt for attempt in login_attempts.get(attempt_key, []) if attempt >= cutoff]
+        login_attempts[attempt_key] = recent_attempts
+        if len(recent_attempts) >= settings.login_rate_limit_attempts:
+            return JSONResponse(
+                {"detail": "Too many login attempts"},
+                status_code=429,
+                headers={"Retry-After": str(settings.login_rate_limit_window_seconds)},
+            )
     try:
-        actor = auth_service().login(email=email, password=password)
+        actor = auth_service().login(email=normalized_email, password=password)
     except ValueError as exc:
+        if settings.is_production:
+            login_attempts.setdefault(attempt_key, []).append(monotonic())
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    login_attempts.pop(attempt_key, None)
     auth_service().persist_session(request, actor)
     target = "/" if actor.active_organization_id or actor.can_view_network else "/select-organization"
     return RedirectResponse(url=target, status_code=303)

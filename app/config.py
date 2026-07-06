@@ -44,6 +44,8 @@ class Settings:
     enable_browser_enforcement: bool = _to_bool(os.getenv("ENABLE_BROWSER_ENFORCEMENT"), False)
     enable_stagehand_fallback: bool = _to_bool(os.getenv("ENABLE_STAGEHAND_FALLBACK"), False)
     browser_auto_submit_cooldown_hours: int = int(os.getenv("BROWSER_AUTO_SUBMIT_COOLDOWN_HOURS", "24"))
+    login_rate_limit_attempts: int = int(os.getenv("LOGIN_RATE_LIMIT_ATTEMPTS", "10"))
+    login_rate_limit_window_seconds: int = int(os.getenv("LOGIN_RATE_LIMIT_WINDOW_SECONDS", "300"))
 
     @property
     def is_production(self) -> bool:
