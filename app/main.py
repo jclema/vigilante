@@ -3,13 +3,13 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 import mimetypes
 from pathlib import Path
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 import re
 from urllib.error import HTTPError
 from datetime import datetime, UTC
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -91,7 +91,22 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
+    unsafe_method = request.method in {"POST", "PUT", "PATCH", "DELETE"}
+    machine_endpoint = request.url.path == "/api/scans/run" or request.url.path.startswith("/api/webhooks/")
+    if settings.is_production and unsafe_method and not machine_endpoint:
+        source = request.headers.get("origin") or request.headers.get("referer")
+        parsed_source = urlsplit(source) if source else None
+        trusted_source = bool(
+            parsed_source
+            and parsed_source.scheme == "https"
+            and parsed_source.hostname == request.url.hostname
+        )
+        if not trusted_source:
+            response = JSONResponse({"detail": "Invalid request origin"}, status_code=403)
+        else:
+            response = await call_next(request)
+    else:
+        response = await call_next(request)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "base-uri 'self'; "

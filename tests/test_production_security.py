@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 import pytest
 
-from app.config import Settings
+from app.config import Settings, settings
 from app.main import app
 
 
@@ -60,3 +60,36 @@ def test_health_endpoints_are_public_and_distinct():
 
     assert health.json() == {"status": "ok"}
     assert readiness.json() == {"status": "ready", "storage_backend": "memory"}
+
+
+def test_production_rejects_cross_site_form_posts():
+    original_env = settings.app_env
+    settings.app_env = "production"
+    try:
+        client = TestClient(app, base_url="https://www.watchmanhub.com")
+        response = client.post(
+            "/auth/login",
+            data={"email": "operator@example.com", "password": "invalid"},
+            headers={"Origin": "https://attacker.example"},
+        )
+    finally:
+        settings.app_env = original_env
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Invalid request origin"}
+
+
+def test_production_accepts_same_origin_form_posts():
+    original_env = settings.app_env
+    settings.app_env = "production"
+    try:
+        client = TestClient(app, base_url="https://www.watchmanhub.com")
+        response = client.post(
+            "/auth/login",
+            data={"email": "operator@example.com", "password": "invalid"},
+            headers={"Origin": "https://www.watchmanhub.com"},
+        )
+    finally:
+        settings.app_env = original_env
+
+    assert response.status_code == 400
