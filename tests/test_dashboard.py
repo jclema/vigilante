@@ -378,9 +378,13 @@ def test_dashboard_page_renders_territory_story():
 
 def test_paginated_command_alerts_respect_hidden_attribute():
     styles = (Path(__file__).parents[1] / "app" / "static" / "styles.css").read_text()
+    template = (Path(__file__).parents[1] / "app" / "templates" / "dashboard.html").read_text()
 
     assert ".command-alert-row[hidden]" in styles
     assert "display: none;" in styles.split(".command-alert-row[hidden]", 1)[1].split("}", 1)[0]
+    assert ".command-map-marker[hidden]" in styles
+    assert "marker.hidden = visibleIndex === -1;" in template
+    assert "positionCommandMarker(marker, row, visibleIndex);" in template
 
 
 def test_api_me_and_dealer_scope():

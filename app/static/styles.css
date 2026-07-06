@@ -7136,6 +7136,10 @@ button:hover {
   cursor: pointer;
 }
 
+.command-map-marker[hidden] {
+  display: none;
+}
+
 .command-map-marker span {
   width: 9px;
   height: 9px;
@@ -7152,31 +7156,6 @@ button:hover {
 .command-map-marker.is-selected {
   transform: scale(1.25);
   box-shadow: 0 0 0 5px rgba(201, 45, 57, 0.13), 0 5px 14px rgba(18, 27, 43, 0.22);
-}
-
-.command-map-marker--1 {
-  top: 22%;
-  left: 48%;
-}
-
-.command-map-marker--2 {
-  top: 43%;
-  left: 39%;
-}
-
-.command-map-marker--3 {
-  top: 54%;
-  left: 58%;
-}
-
-.command-map-marker--4 {
-  top: 68%;
-  left: 47%;
-}
-
-.command-map-marker--5 {
-  top: 77%;
-  left: 61%;
 }
 
 .command-map-legend {

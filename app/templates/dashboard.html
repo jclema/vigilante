@@ -172,7 +172,7 @@
               <h2>Territorio</h2>
               <p>Medellín y Valle de Aburrá</p>
             </div>
-            <div class="command-map-mode"><span>Solo alertas</span></div>
+            <div class="command-map-mode"><span data-command-map-mode>Solo alertas</span></div>
           </div>
           <div class="command-cartography">
             <img src="/static/medellin-atlas-login.webp" alt="" aria-hidden="true" />
@@ -184,7 +184,7 @@
             {% if card.case.status != 'dismissed' %}
             <button
               type="button"
-              class="command-map-marker {{ card.visual_tone }} command-map-marker--{{ loop.index }}"
+              class="command-map-marker {{ card.visual_tone }}"
               data-command-map-marker
               data-command-case-id="{{ card.case.id }}"
               aria-label="Seleccionar {{ card.case.title }}"
@@ -699,6 +699,7 @@
     const commandPageNext = document.querySelector("[data-command-page-next]");
     const commandPageStatus = document.querySelector("[data-command-page-status]");
     const commandMarkers = Array.from(document.querySelectorAll("[data-command-map-marker]"));
+    const commandMapMode = document.querySelector("[data-command-map-mode]");
     const commandSelectedId = document.querySelector("[data-command-selected-id]");
     const commandSelectedSource = document.querySelector("[data-command-selected-source]");
     const commandSelectedDealer = document.querySelector("[data-command-selected-dealer]");
@@ -713,6 +714,23 @@
     const commandPageSize = 6;
     let commandPage = 1;
     let commandFilteredTotal = commandAlerts.length;
+
+    const positionCommandMarker = (marker, row, visibleIndex) => {
+      const anchors = {
+        Bello: [50, 18],
+        Medellín: [51, 48],
+        Medellin: [51, 48],
+        Itagüí: [38, 74],
+        Itagui: [38, 74],
+        Envigado: [65, 72],
+        Sabaneta: [56, 84],
+      };
+      const offsets = [[0, 0], [-5, 4], [5, 4], [-7, -4], [7, -4], [0, 8]];
+      const anchor = anchors[row.dataset.city] || [51, 48];
+      const offset = offsets[visibleIndex] || [0, 0];
+      marker.style.left = `${Math.min(92, Math.max(8, anchor[0] + offset[0]))}%`;
+      marker.style.top = `${Math.min(90, Math.max(10, anchor[1] + offset[1]))}%`;
+    };
 
     const renderCommandPage = () => {
       const matchingAlerts = commandAlerts.filter((row) => row.dataset.filterMatch !== "false");
@@ -730,11 +748,22 @@
         .forEach((row) => {
           row.hidden = true;
         });
+      const visibleAlerts = matchingAlerts.slice(pageStart, pageEnd);
+      commandMarkers.forEach((marker) => {
+        const row = commandAlerts.find((item) => item.dataset.caseId === marker.dataset.commandCaseId);
+        const visibleIndex = row ? visibleAlerts.indexOf(row) : -1;
+        marker.hidden = visibleIndex === -1;
+        if (row && visibleIndex >= 0) positionCommandMarker(marker, row, visibleIndex);
+      });
 
       if (commandPagination) commandPagination.hidden = commandFilteredTotal <= commandPageSize;
       if (commandPagePrevious) commandPagePrevious.disabled = commandPage === 1;
       if (commandPageNext) commandPageNext.disabled = commandPage === pageCount;
       if (commandPageStatus) commandPageStatus.textContent = `${commandPage} de ${pageCount}`;
+      if (commandMapMode) {
+        const visibleCount = Math.min(commandPageSize, Math.max(0, commandFilteredTotal - pageStart));
+        commandMapMode.textContent = `${visibleCount} alerta${visibleCount === 1 ? "" : "s"} en mapa`;
+      }
       return { pageStart, pageEnd: Math.min(pageEnd, commandFilteredTotal) };
     };
 
