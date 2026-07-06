@@ -395,6 +395,7 @@ Nunca guardar credenciales, service accounts, evidencia real ni `storage_state` 
 
 - [`AGENTS.md`](AGENTS.md): mapa rapido del repo para agentes.
 - [`docs/google-cloud-pilot.md`](docs/google-cloud-pilot.md): checklist de despliegue del piloto.
+- [`docs/watchmanhub-production-runbook.md`](docs/watchmanhub-production-runbook.md): operacion, diagnostico y rollback de produccion.
 - [`docs/gbp-access-matrix-guide.md`](docs/gbp-access-matrix-guide.md): levantamiento de acceso GBP.
 - [`docs/experimental-browser-capture.md`](docs/experimental-browser-capture.md): limites y uso del scraper experimental.
 - [`Agente IA Anti-Phishing Google Maps.md`](Agente%20IA%20Anti-Phishing%20Google%20Maps.md): investigacion y propuesta original.
