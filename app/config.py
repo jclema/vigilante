@@ -14,6 +14,7 @@ def _to_bool(value: str | None, default: bool) -> bool:
 class Settings:
     app_name: str = os.getenv("APP_NAME", "Vigilante")
     app_env: str = os.getenv("APP_ENV", "development")
+    allowed_hosts: str = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver")
     dashboard_username: str = os.getenv("DASHBOARD_USERNAME", "operator")
     dashboard_password: str = os.getenv("DASHBOARD_PASSWORD", "change-me")
     super_admin_email: str = os.getenv("SUPER_ADMIN_EMAIL", "joework.co@gmail.com")
@@ -43,6 +44,32 @@ class Settings:
     enable_browser_enforcement: bool = _to_bool(os.getenv("ENABLE_BROWSER_ENFORCEMENT"), False)
     enable_stagehand_fallback: bool = _to_bool(os.getenv("ENABLE_STAGEHAND_FALLBACK"), False)
     browser_auto_submit_cooldown_hours: int = int(os.getenv("BROWSER_AUTO_SUBMIT_COOLDOWN_HOURS", "24"))
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.strip().lower() == "production"
+
+    @property
+    def allowed_host_list(self) -> list[str]:
+        return [host.strip() for host in self.allowed_hosts.split(",") if host.strip()]
+
+    def validate_for_startup(self) -> None:
+        if not self.is_production:
+            return
+
+        errors: list[str] = []
+        if self.session_secret == "change-me-now" or len(self.session_secret) < 32:
+            errors.append("SESSION_SECRET must be a unique value with at least 32 characters")
+        if self.seed_demo_data:
+            errors.append("SEED_DEMO_DATA must be false")
+        if self.storage_backend != "firestore":
+            errors.append("STORAGE_BACKEND must be firestore")
+        if not self.evidence_bucket_name:
+            errors.append("EVIDENCE_BUCKET_NAME is required")
+        if {"*", ""} & set(self.allowed_host_list):
+            errors.append("ALLOWED_HOSTS must contain explicit hostnames")
+        if errors:
+            raise ValueError("Unsafe production configuration: " + "; ".join(errors))
 
 
 settings = Settings()
