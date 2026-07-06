@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -373,6 +374,13 @@ def test_dashboard_page_renders_territory_story():
     assert "const commandPageSize = 6;" in response.text
     assert "Contrastar con sedes oficiales" in response.text
     assert "Punto en foco" in response.text
+
+
+def test_paginated_command_alerts_respect_hidden_attribute():
+    styles = (Path(__file__).parents[1] / "app" / "static" / "styles.css").read_text()
+
+    assert ".command-alert-row[hidden]" in styles
+    assert "display: none;" in styles.split(".command-alert-row[hidden]", 1)[1].split("}", 1)[0]
 
 
 def test_api_me_and_dealer_scope():

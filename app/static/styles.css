@@ -6891,6 +6891,10 @@ button:hover {
   cursor: pointer;
 }
 
+.command-alert-row[hidden] {
+  display: none;
+}
+
 .command-alert-row::before {
   content: "";
   position: absolute;
