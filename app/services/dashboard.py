@@ -1094,8 +1094,10 @@ class DashboardService:
 
     @staticmethod
     def _place_maps_link(name: str | None = None, address: str | None = None, place_id: str | None = None, google_maps_uri: str | None = None):
+        if google_maps_uri and DashboardService._is_precise_maps_link(str(google_maps_uri)):
+            return google_maps_uri
         if place_id:
-            return f"https://www.google.com/maps/place/?q=place_id:{quote(str(place_id))}"
+            return DashboardService._place_id_maps_link(name, address, str(place_id))
         if google_maps_uri and not DashboardService._is_generic_maps_landing(str(google_maps_uri)):
             return google_maps_uri
         query = " ".join(part for part in [str(name or ""), str(address or "")] if part).strip()
@@ -1157,11 +1159,13 @@ class DashboardService:
             place_id = DashboardService._place_id_from_maps_link(google_maps_uri)
         name = content.get("name") or content.get("address") or "Ubicacion observada"
         address = content.get("address")
+        if google_maps_uri and DashboardService._is_precise_maps_link(google_maps_uri):
+            return google_maps_uri
         if place_id:
             return DashboardService._place_maps_link(str(name), str(address or ""), str(place_id))
-        if google_maps_uri and not DashboardService._is_generic_maps_landing(google_maps_uri):
-            return google_maps_uri
         google_maps_uri = content.get("source_page_url")
+        if google_maps_uri and DashboardService._is_precise_maps_link(str(google_maps_uri)):
+            return str(google_maps_uri)
         if google_maps_uri and not DashboardService._is_generic_maps_landing(str(google_maps_uri)):
             return str(google_maps_uri)
         if name or address:
@@ -1175,6 +1179,11 @@ class DashboardService:
         return None
 
     @staticmethod
+    def _place_id_maps_link(name: str | None, address: str | None, place_id: str) -> str:
+        query = " ".join(part for part in [str(name or ""), str(address or "")] if part).strip() or "Google Maps"
+        return f"https://www.google.com/maps/search/?api=1&query={quote(query)}&query_place_id={quote(place_id)}"
+
+    @staticmethod
     def _place_id_from_maps_link(url: str) -> str | None:
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
@@ -1186,6 +1195,18 @@ class DashboardService:
             if value.startswith("place_id:"):
                 return value.removeprefix("place_id:")
         return None
+
+    @staticmethod
+    def _is_precise_maps_link(url: str) -> bool:
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        if query.get("cid", [""])[0]:
+            return True
+        if query.get("query_place_id", [""])[0]:
+            return True
+        if query.get("q", [""])[0].startswith("place_id:"):
+            return True
+        return "/maps/place" in parsed.path
 
     @staticmethod
     def _is_generic_maps_landing(url: str) -> bool:

@@ -177,8 +177,8 @@ def test_place_clone_case_detail_builds_comparison_panel():
     assert detail["clone_comparison"]["clone_name"]
     assert detail["clone_comparison"]["official_name"] == clone_case.dealer_name
     assert detail["clone_comparison"]["clone_maps_link"].startswith("https://www.google.com/maps")
-    assert "place/?q=place_id:clone-bello-ui" in detail["clone_comparison"]["clone_maps_link"]
-    assert "place/?q=place_id:place-official-bello" in detail["clone_comparison"]["official_maps_link"]
+    assert "query_place_id=clone-bello-ui" in detail["clone_comparison"]["clone_maps_link"]
+    assert "query_place_id=place-official-bello" in detail["clone_comparison"]["official_maps_link"]
 
 
 def test_maps_link_prefers_place_identity_over_generic_map_view():
@@ -191,7 +191,26 @@ def test_maps_link_prefers_place_identity_over_generic_map_view():
         }
     )
 
-    assert link == "https://www.google.com/maps/place/?q=place_id:clone-place-123"
+    assert link == (
+        "https://www.google.com/maps/search/?api=1&query=Yamaha%20Bello%20Principal%20"
+        "Diagonal%2050%2045-12%2C%20Bello&query_place_id=clone-place-123"
+    )
+
+
+def test_maps_link_prefers_precise_google_cid_over_place_id():
+    link = DashboardService._maps_link(
+        {
+            "raw_payload": {
+                "googleMapsUri": "https://maps.google.com/?cid=5737355300905269745",
+                "id": "ChIJ6yqsYgApRI4R8bmplD8un08",
+            },
+            "name": "Yamaha Principal Medellín",
+            "address": "Cra. 48 #055422, Cl. 32B Sur #29, Envigado",
+            "place_id": "ChIJ6yqsYgApRI4R8bmplD8un08",
+        }
+    )
+
+    assert link == "https://maps.google.com/?cid=5737355300905269745"
 
 
 def test_maps_link_recovers_query_place_id_from_google_maps_url():
@@ -205,7 +224,7 @@ def test_maps_link_recovers_query_place_id_from_google_maps_url():
         }
     )
 
-    assert link == "https://www.google.com/maps/place/?q=place_id:ChIJstable123"
+    assert link == "https://www.google.com/maps/search/?api=1&query=Yamaha%20Sports&query_place_id=ChIJstable123"
 
 
 def test_review_photo_case_prioritizes_visual_evidence_over_google_report_draft():
@@ -278,7 +297,8 @@ def test_dealer_maps_link_uses_places_resolution_when_profile_is_missing(monkeyp
     service = DashboardService(repo)
     link = service._dealer_maps_link(dealer, prefer_resolution=True)
 
-    assert link == "https://www.google.com/maps/place/?q=place_id:ChIJtest123"
+    assert "query_place_id=ChIJtest123" in link
+    assert "Mundo%20Yamaha%20Guayabal" in link
 
 
 def test_case_detail_page_renders():
@@ -347,7 +367,7 @@ def test_place_clone_case_detail_opens_timeline_and_related_by_default():
     response = client.get(f"/cases/{clone_case.id}")
 
     assert response.status_code == 200
-    assert 'href="https://www.google.com/maps/place/?q=place_id:clone-bello-open-sections" target="_blank" rel="noopener noreferrer"' in response.text
+    assert 'query_place_id=clone-bello-open-sections" target="_blank" rel="noopener noreferrer"' in response.text
     assert '<summary>Ver línea de tiempo del caso</summary>' in response.text
     assert '<details class="follow-up-details" open>' in response.text
     assert "Ver otros casos de esta sede" in response.text
