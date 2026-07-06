@@ -1,0 +1,18 @@
+name: watchmanhub-url-map
+defaultService: global/backendServices/watchmanhub-backend
+hostRules:
+  - hosts:
+      - watchmanhub.com
+    pathMatcher: apex-redirect
+  - hosts:
+      - www.watchmanhub.com
+    pathMatcher: application
+pathMatchers:
+  - name: apex-redirect
+    defaultUrlRedirect:
+      hostRedirect: www.watchmanhub.com
+      httpsRedirect: true
+      redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
+      stripQuery: false
+  - name: application
+    defaultService: global/backendServices/watchmanhub-backend
