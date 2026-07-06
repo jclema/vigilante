@@ -715,6 +715,20 @@
     let commandPage = 1;
     let commandFilteredTotal = commandAlerts.length;
 
+    const normalizeFilterValue = (value) => (value || "")
+      .toString()
+      .trim()
+      .toLocaleLowerCase("es")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    const sameFilterValue = (left, right) => normalizeFilterValue(left) === normalizeFilterValue(right);
+    const matchesCityFilter = (city, filterValue) => filterValue === "all" || sameFilterValue(city, filterValue);
+    const setSelectValueFromParam = (select, value) => {
+      if (!select || !value) return;
+      const option = Array.from(select.options).find((item) => sameFilterValue(item.value, value));
+      if (option) select.value = option.value;
+    };
+
     const positionCommandMarker = (marker, row, visibleIndex) => {
       const anchors = {
         Bello: [50, 18],
@@ -859,7 +873,7 @@
 
     if (!rows.length || !citySelect || !statusSelect || !prioritySelect) return;
 
-    if (params.has("city")) citySelect.value = params.get("city");
+    if (params.has("city")) setSelectValueFromParam(citySelect, params.get("city"));
     if (params.has("status")) statusSelect.value = params.get("status");
     if (params.has("priority")) prioritySelect.value = params.get("priority");
     const allowedLayers = ["all", "alerts", "gbp", "public"];
@@ -1012,7 +1026,7 @@
       if (!preservePage) commandPage = 1;
 
       rows.forEach((row) => {
-        const matchesCity = city === "all" || row.dataset.city === city;
+        const matchesCity = matchesCityFilter(row.dataset.city, city);
         const matchesStatus = status === "all" || row.dataset.status === status;
         const matchesPriority = priority === "all" || row.dataset.priority === priority;
         const isVisible = matchesCity && matchesStatus && matchesPriority && matchesLayer(row);
@@ -1022,13 +1036,13 @@
       const pageRange = renderCommandPage();
 
       territoryCards.forEach((card) => {
-        const matchesCity = city === "all" || card.dataset.city === city;
+        const matchesCity = matchesCityFilter(card.dataset.city, city);
         card.classList.toggle("is-dimmed", !matchesCity);
         card.classList.toggle("is-highlighted", matchesCity);
       });
 
       [...territoryNodes, ...coverageCards].forEach((card) => {
-        const matchesCity = city === "all" || card.dataset.city === city;
+        const matchesCity = matchesCityFilter(card.dataset.city, city);
         const visibleByLayer = matchesLayer(card);
         const isVisible = matchesCity && visibleByLayer;
         card.hidden = card.hasAttribute("data-coverage-card") ? !isVisible : false;
@@ -1084,7 +1098,8 @@
     };
 
     const activateCity = (city) => {
-      citySelect.value = city || "all";
+      if (city) setSelectValueFromParam(citySelect, city);
+      else citySelect.value = "all";
       applyFilters({ scrollToThreat: true });
     };
 

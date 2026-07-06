@@ -455,6 +455,15 @@ def test_paginated_command_alerts_respect_hidden_attribute():
     assert "positionCommandMarker(marker, row, visibleIndex);" in template
 
 
+def test_command_city_filter_is_accent_insensitive():
+    template = (Path(__file__).parents[1] / "app" / "templates" / "dashboard.html").read_text()
+
+    assert "normalizeFilterValue" in template
+    assert "matchesCityFilter(row.dataset.city, city)" in template
+    assert "setSelectValueFromParam(citySelect, params.get(\"city\"))" in template
+    assert "row.dataset.city === city" not in template
+
+
 def test_api_me_and_dealer_scope():
     repo = app_repository
     repo.seed()
