@@ -367,6 +367,9 @@ def test_dashboard_page_renders_territory_story():
     assert "Alertas activas" in response.text
     assert "Confianza del sistema" in response.text
     assert "Filtrar" in response.text
+    assert 'data-command-pagination' in response.text
+    assert 'data-command-page-next' in response.text
+    assert "const commandPageSize = 6;" in response.text
     assert "Contrastar con sedes oficiales" in response.text
     assert "Punto en foco" in response.text
 

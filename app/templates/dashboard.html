@@ -159,6 +159,11 @@
             {% endif %}
             {% endfor %}
           </div>
+          <nav class="command-pagination" data-command-pagination aria-label="Páginas de alertas activas">
+            <button type="button" data-command-page-prev aria-label="Ver alertas anteriores">Anterior</button>
+            <span data-command-page-status aria-live="polite">Página 1</span>
+            <button type="button" data-command-page-next aria-label="Ver más alertas">Siguiente</button>
+          </nav>
         </section>
 
         <section class="command-map-panel" aria-label="Mapa operacional de alertas">
@@ -241,56 +246,45 @@
     </section>
 
     {% if sections.threats.watchlist_cards %}
-    <section class="critical-feed critical-feed--below critical-feed--watchlist">
-      <div class="feed-head">
+    <section class="watchlist-panel">
+      <div class="watchlist-head">
         <div>
           <span class="panel-kicker">Watchlist alto riesgo</span>
-          <h3>Casos que piden validación humana</h3>
+          <h2>Validar antes de escalar</h2>
+          <p>Señales ambiguas que necesitan criterio humano.</p>
         </div>
-        <small>Se revisan antes de escalar o descartar.</small>
+        <span class="watchlist-count">{{ sections.threats.watchlist_count }} pendiente{% if sections.threats.watchlist_count != 1 %}s{% endif %}</span>
       </div>
-      <div class="threat-list threat-list--compact threat-list--watchlist">
+      <div class="watchlist-list">
         {% for card in sections.threats.watchlist_cards %}
         {% set case = card.case %}
         {% if case.status != 'dismissed' %}
-        <article class="threat-row threat-row--compact risk-watchlist" data-case-row data-city="{{ card.city }}" data-status="{{ card.case_status_label }}" data-priority="{{ card.priority_label }}" data-case-id="{{ case.id }}" data-focus-dealer="{{ card.dealer_id }}" data-mode="{{ card.monitoring_mode_label|lower }}" data-has-alert="true" data-title="{{ case.title }}" data-recommended-action="{{ card.recommended_action }}" data-risk="{{ case.risk_score }}" data-maps-link="{{ card.maps_link or '' }}">
-          <div class="threat-main">
-            <div class="threat-card-topline">
-              <div class="threat-pills">
-                <span class="threat-pill is-source risk-bucket-pill risk-bucket-pill--{{ card.risk_bucket_tone }}">🧭 {{ card.risk_bucket_label }}</span>
-                <span class="threat-pill is-priority risk-watchlist">🕵️ Validación humana</span>
-              </div>
-            </div>
-            <div class="threat-title">{{ case.title }}</div>
-            <div class="threat-meta">🏍️ {{ case.dealer_name }} · 📍 {{ card.city }}</div>
-            <div class="threat-meta threat-meta--subtle">🕒 Identificado: {{ card.identified_at }}</div>
-            <div class="threat-callout">
-              <span class="callout-label">🕵️ Validar antes de escalar</span>
-              <strong>{{ card.recommended_action }}</strong>
-              <small>Primero se valida y luego se confirma o se archiva.</small>
-            </div>
-            <div class="threat-card-footnote">
-              <span>🔎 La comparación completa y la evidencia quedan dentro del expediente.</span>
-            </div>
-            <div class="threat-inline-actions">
-              {% if card.maps_link %}
-              <a class="mini-link" href="{{ card.maps_link }}">📍 Pin observado</a>
-              {% endif %}
-              {% if card.dealer_maps_link %}
-              <a class="mini-link" href="{{ card.dealer_maps_link }}">🏍️ Sede oficial</a>
-              {% endif %}
-              <a class="case-link" href="/cases/{{ case.id }}">Validar watchlist</a>
-            </div>
+        <article class="watchlist-row" data-case-row data-city="{{ card.city }}" data-status="{{ card.case_status_label }}" data-priority="{{ card.priority_label }}" data-case-id="{{ case.id }}" data-focus-dealer="{{ card.dealer_id }}" data-mode="{{ card.monitoring_mode_label|lower }}" data-has-alert="true" data-title="{{ case.title }}" data-recommended-action="{{ card.recommended_action }}" data-risk="{{ case.risk_score }}" data-maps-link="{{ card.maps_link or '' }}">
+          <div class="watchlist-visual">
+            {% if card.media %}
+            <img src="{{ card.media.url }}" alt="" loading="lazy" />
+            {% else %}
+            <span aria-hidden="true">🕵️</span>
+            {% endif %}
           </div>
-          <div class="threat-side">
-            <div class="score-wrap">
-              <div class="score">{{ case.risk_score }}</div>
-              <div class="score-label">Índice de observación priorizada</div>
-            </div>
-            <div class="threat-side-meta">
-              <strong>{{ card.case_status_label }}</strong>
-              <span>{{ card.city }}</span>
-            </div>
+          <div class="watchlist-copy">
+            <span>{{ card.risk_bucket_label }}</span>
+            <h3>{{ case.title }}</h3>
+            <p>{{ case.dealer_name }} · {{ card.city }} · {{ card.identified_at }}</p>
+          </div>
+          <div class="watchlist-action">
+            <span>Siguiente acción</span>
+            <strong>{{ card.recommended_action }}</strong>
+          </div>
+          <div class="watchlist-risk">
+            <strong>{{ case.risk_score }}</strong>
+            <span>{{ card.priority_label }}</span>
+          </div>
+          <div class="watchlist-links">
+            {% if card.maps_link %}
+            <a href="{{ card.maps_link }}">Mapa ↗</a>
+            {% endif %}
+            <a class="watchlist-primary" href="/cases/{{ case.id }}">Validar caso</a>
           </div>
         </article>
         {% endif %}
@@ -299,13 +293,17 @@
     </section>
     {% endif %}
 
-      <section id="map-panel" class="section dashboard-section">
-        <div class="section-header story-header">
+      <section id="map-panel" class="section dashboard-section operational-section">
+        <div class="operational-section-head">
           <div>
-            <div class="section-kicker">🗺️ Territorio</div>
-            <h2>Ver presión por zona.</h2>
+            <span class="panel-kicker">Territorio</span>
+            <h2>Presión por zona</h2>
+            <p>Ubica alertas y contrasta la cobertura oficial.</p>
           </div>
-          <p>Usa el mapa como apoyo territorial después del feed crítico.</p>
+          <div class="operational-section-stat">
+            <strong>{{ sections.executive.highlights[0].value }}</strong>
+            <span>alertas en mapa</span>
+          </div>
         </div>
 
         <section class="municipality-strip municipality-strip--distilled" aria-label="Municipios vigilados">
@@ -323,7 +321,7 @@
               <div class="territory-map-head territory-map-head--interactive">
                 <div>
                   <div class="territory-map-label">Valle de Aburrá</div>
-                  <p>Usa el mapa como apoyo territorial después del feed: sirve para ubicar la presión, contrastar sedes oficiales y abrir contexto geográfico cuando haga falta.</p>
+                  <p>Selecciona un punto para ver contexto y abrir el expediente asociado.</p>
                 </div>
                 <div class="territory-map-summary">
                   <span>{{ sections.territory.hotspots|length }} sedes oficiales en el mapa</span>
@@ -353,29 +351,8 @@
               <div class="map-focus-chip" data-map-focus-copy>🧭 Selecciona una sede, una fila oficial o una alerta para centrar el mapa y alinear la lectura del feed crítico.</div>
 
               <div class="map-viewport" data-map-viewport>
-                <div class="map-stage" data-map-stage>
-                  <div class="territory-map-grid" aria-hidden="true"></div>
-                  <svg class="territory-base" viewBox="0 0 1000 760" aria-hidden="true" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="riverGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="rgba(10,45,130,0.05)" />
-                        <stop offset="45%" stop-color="rgba(10,45,130,0.16)" />
-                        <stop offset="100%" stop-color="rgba(10,45,130,0.06)" />
-                      </linearGradient>
-                    </defs>
-                    <path class="territory-contour territory-contour--outer" d="M286 56 C382 4, 612 14, 700 84 C788 152, 836 270, 820 408 C804 546, 732 664, 620 718 C508 772, 356 742, 270 654 C184 566, 156 430, 188 292 C214 180, 238 102, 286 56" />
-                    <path class="territory-contour territory-contour--inner" d="M358 102 C430 62, 586 68, 652 122 C718 176, 752 270, 738 386 C724 502, 670 600, 582 652 C494 704, 392 690, 320 626 C248 562, 228 468, 250 360 C268 266, 298 138, 358 102" />
-                    <path class="territory-valley" d="M395 18 C455 62, 478 118, 470 188 C462 260, 482 316, 515 376 C548 435, 563 487, 548 552 C534 615, 548 676, 592 742" />
-                    <path class="territory-river" d="M500 18 C476 88, 484 138, 500 194 C518 250, 510 312, 500 374 C488 446, 492 520, 506 596 C516 646, 522 694, 536 742" />
-                    <path class="territory-road territory-road--north" d="M436 84 C474 116, 494 144, 506 196 C520 254, 516 292, 508 344" />
-                    <path class="territory-road territory-road--central" d="M484 210 C544 240, 592 270, 642 324 C676 360, 704 404, 726 446" />
-                    <path class="territory-road territory-road--south" d="M464 388 C424 438, 396 474, 376 530 C360 578, 360 622, 376 676" />
-                    <path class="territory-arc territory-arc--west" d="M192 146 C262 136, 318 178, 338 246 C354 302, 334 374, 290 422" />
-                    <path class="territory-arc territory-arc--east" d="M684 134 C750 146, 806 198, 822 264 C836 324, 808 390, 756 444" />
-                    <circle class="territory-zone territory-zone--north" cx="470" cy="160" r="98" />
-                    <circle class="territory-zone territory-zone--central" cx="505" cy="346" r="128" />
-                    <circle class="territory-zone territory-zone--south" cx="550" cy="578" r="118" />
-                  </svg>
+                <div class="map-stage map-stage--atlas" data-map-stage>
+                  <img class="territory-atlas-image" src="/static/medellin-atlas-login.webp" alt="" aria-hidden="true" />
                   {% for hotspot in sections.territory.hotspots %}
                   <div
                     class="territory-heat territory-heat--{% if hotspot.risk_index >= 80 %}critical{% elif hotspot.active_cases %}warm{% else %}calm{% endif %}"
@@ -498,23 +475,20 @@
         </details>
       </section>
 
-      <section id="operations-panel" class="section dashboard-section">
-        <div class="section-header story-header">
+      <section id="operations-panel" class="section dashboard-section operational-section">
+        <div class="operational-section-head">
           <div>
-            <div class="section-kicker">⚙️ Operación</div>
-            <h2>Mover cada caso dentro del flujo con Google.</h2>
+            <span class="panel-kicker">Operación</span>
+            <h2>Flujo con Google</h2>
+            <p>Mueve cada caso hasta resolución y detecta bloqueos.</p>
           </div>
-          <p>Destraba el siguiente paso.</p>
+          <div class="operational-section-stat">
+            <strong>{{ sections.operations.summary.active_cases }}</strong>
+            <span>casos activos</span>
+          </div>
         </div>
 
         <section class="google-kanban" aria-label="Flujo de casos con Google">
-          <div class="section-header story-header compact">
-            <div>
-              <div class="section-kicker">📨 Flujo con Google</div>
-              <h3>Ver cada caso dentro del flujo de trabajo</h3>
-            </div>
-            <p>Tablero de seguimiento y avance.</p>
-          </div>
           <div class="google-kanban-board">
             {% for column in sections.operations.google_kanban %}
             <section class="google-kanban-column {% if column.is_bottleneck %}is-bottleneck{% endif %}" aria-label="{{ column.label }}">
@@ -526,7 +500,7 @@
                 <span>{{ column.count }}</span>
               </div>
               <div class="google-kanban-status {% if column.is_bottleneck %}is-bottleneck{% endif %}">
-                <span class="google-kanban-status-icon" aria-hidden="true">{% if column.is_bottleneck %}🚨{% else %}🧭{% endif %}</span>
+                <span class="google-kanban-status-icon" aria-hidden="true">{% if column.is_bottleneck %}!{% else %}·{% endif %}</span>
                 <span class="google-kanban-status-text">{{ column.bottleneck_label }}</span>
               </div>
               <div class="google-kanban-cards">
@@ -558,41 +532,40 @@
         </section>
       </section>
 
-      <section id="system-panel" class="section dashboard-section">
-        <div class="section-header story-header split">
+      <section id="system-panel" class="section dashboard-section operational-section system-console">
+        <div class="operational-section-head operational-section-head--system">
           <div>
-            <div class="section-kicker">🛠️ Estado del sistema</div>
-            <h2>Cómo está respondiendo Vigilante ahora.</h2>
-            <p>{{ sections.operations.lead.headline }} {{ sections.operations.lead.summary }}</p>
+            <span class="panel-kicker">Estado del sistema</span>
+            <h2>{{ sections.operations.lead.headline }}</h2>
+            <p>{{ sections.operations.lead.summary }}</p>
           </div>
-          <div class="cost-board">
-            <span>🛰️ Places {{ sections.operations.costs.places }}</span>
-            <span>🏢 GBP {{ sections.operations.costs.gbp }}</span>
-            <span>💸 Costo total {{ sections.operations.costs.today }}</span>
+          <div class="system-costs">
+            <span>Places <strong>{{ sections.operations.costs.places }}</strong></span>
+            <span>GBP <strong>{{ sections.operations.costs.gbp }}</strong></span>
+            <span>Total <strong>{{ sections.operations.costs.today }}</strong></span>
           </div>
         </div>
 
         <div class="operations-stage">
           <div class="status-board">
             <div>
-              <span>✅ Procesos completados <span class="tooltip-chip" tabindex="0" title="Tareas automáticas que terminaron sin errores, como barridos o análisis de eventos.">?</span></span>
+              <span class="system-status-dot is-ok" aria-hidden="true"></span>
+              <span>Completados <span class="tooltip-chip" tabindex="0" title="Tareas automáticas que terminaron sin errores, como barridos o análisis de eventos.">?</span></span>
               <strong>{{ sections.operations.health.completed }}</strong>
             </div>
             <div>
-              <span>🟡 En curso</span>
+              <span class="system-status-dot is-running" aria-hidden="true"></span>
+              <span>En curso</span>
               <strong>{{ sections.operations.health.running }}</strong>
             </div>
             <div>
-              <span>🛠️ Piden revisión <span class="tooltip-chip" tabindex="0" title="Procesos con error o degradación que requieren seguimiento para no perder calidad operativa.">?</span></span>
+              <span class="system-status-dot is-attention" aria-hidden="true"></span>
+              <span>Revisión <span class="tooltip-chip" tabindex="0" title="Procesos con error o degradación que requieren seguimiento para no perder calidad operativa.">?</span></span>
               <strong>{{ sections.operations.health.attention }}</strong>
             </div>
           </div>
 
           <article class="ops-spotlight">
-            <div class="ops-summary-line ops-summary-line--lead">
-              <span>Estado operativo</span>
-              <strong>{{ sections.operations.lead.headline }}</strong>
-            </div>
             <div class="ops-summary-line">
               <span>Último barrido</span>
               <strong>{{ sections.operations.summary.latest_scan_time }}</strong>
@@ -721,6 +694,10 @@
     const mapContextPrimary = document.querySelector("[data-map-context-primary]");
     const mapContextSecondary = document.querySelector("[data-map-context-secondary]");
     const commandAlerts = Array.from(document.querySelectorAll("[data-command-alert]"));
+    const commandPagination = document.querySelector("[data-command-pagination]");
+    const commandPagePrevious = document.querySelector("[data-command-page-prev]");
+    const commandPageNext = document.querySelector("[data-command-page-next]");
+    const commandPageStatus = document.querySelector("[data-command-page-status]");
     const commandMarkers = Array.from(document.querySelectorAll("[data-command-map-marker]"));
     const commandSelectedId = document.querySelector("[data-command-selected-id]");
     const commandSelectedSource = document.querySelector("[data-command-selected-source]");
@@ -733,6 +710,41 @@
     const commandSelectedRiskBar = document.querySelector("[data-command-selected-risk-bar]");
     const commandSelectedAction = document.querySelector("[data-command-selected-action]");
     const commandSelectedHref = document.querySelector("[data-command-selected-href]");
+    const commandPageSize = 6;
+    let commandPage = 1;
+    let commandFilteredTotal = commandAlerts.length;
+
+    const renderCommandPage = () => {
+      const matchingAlerts = commandAlerts.filter((row) => row.dataset.filterMatch !== "false");
+      commandFilteredTotal = matchingAlerts.length;
+      const pageCount = Math.max(1, Math.ceil(commandFilteredTotal / commandPageSize));
+      commandPage = Math.min(Math.max(commandPage, 1), pageCount);
+      const pageStart = (commandPage - 1) * commandPageSize;
+      const pageEnd = pageStart + commandPageSize;
+
+      matchingAlerts.forEach((row, index) => {
+        row.hidden = index < pageStart || index >= pageEnd;
+      });
+      commandAlerts
+        .filter((row) => row.dataset.filterMatch === "false")
+        .forEach((row) => {
+          row.hidden = true;
+        });
+
+      if (commandPagination) commandPagination.hidden = commandFilteredTotal <= commandPageSize;
+      if (commandPagePrevious) commandPagePrevious.disabled = commandPage === 1;
+      if (commandPageNext) commandPageNext.disabled = commandPage === pageCount;
+      if (commandPageStatus) commandPageStatus.textContent = `${commandPage} de ${pageCount}`;
+      return { pageStart, pageEnd: Math.min(pageEnd, commandFilteredTotal) };
+    };
+
+    const changeCommandPage = (direction) => {
+      commandPage += direction;
+      renderCommandPage();
+      selectCommandCase(commandAlerts.find((row) => !row.hidden));
+      threatList?.scrollTo({ top: 0, behavior: "smooth" });
+      applyFilters({ preservePage: true });
+    };
 
     const selectCommandCase = (row) => {
       if (!row) return;
@@ -964,20 +976,21 @@
     };
 
     const applyFilters = (options = {}) => {
-      const { scrollToThreat = false } = options;
+      const { scrollToThreat = false, preservePage = false } = options;
       const city = citySelect.value;
       const status = statusSelect.value;
       const priority = prioritySelect.value;
-      let visible = 0;
+      if (!preservePage) commandPage = 1;
 
       rows.forEach((row) => {
         const matchesCity = city === "all" || row.dataset.city === city;
         const matchesStatus = status === "all" || row.dataset.status === status;
         const matchesPriority = priority === "all" || row.dataset.priority === priority;
         const isVisible = matchesCity && matchesStatus && matchesPriority && matchesLayer(row);
-        row.hidden = !isVisible;
-        if (isVisible) visible += 1;
+        row.dataset.filterMatch = isVisible ? "true" : "false";
+        if (!row.hasAttribute("data-command-alert")) row.hidden = !isVisible;
       });
+      const pageRange = renderCommandPage();
 
       territoryCards.forEach((card) => {
         const matchesCity = city === "all" || card.dataset.city === city;
@@ -1008,9 +1021,12 @@
                 : "capa barrido público"
           );
         }
+        const range = commandFilteredTotal
+          ? `${pageRange.pageStart + 1}-${pageRange.pageEnd} de ${commandFilteredTotal}`
+          : "0";
         filterSummary.textContent = segments.length
-          ? `Mostrando ${visible} amenaza${visible === 1 ? "" : "s"} para ${segments.join(" · ")}.`
-          : `Mostrando ${visible} amenaza${visible === 1 ? "" : "s"} activas en toda la red.`;
+          ? `Mostrando ${range} amenaza${commandFilteredTotal === 1 ? "" : "s"} · ${segments.join(" · ")}.`
+          : `Mostrando ${range} amenaza${commandFilteredTotal === 1 ? "" : "s"} activas en toda la red.`;
       }
 
       const selectedCommandAlert = commandAlerts.find((row) => row.classList.contains("is-selected"));
@@ -1059,6 +1075,8 @@
     citySelect.addEventListener("change", () => applyFilters());
     statusSelect.addEventListener("change", () => applyFilters());
     prioritySelect.addEventListener("change", () => applyFilters());
+    commandPagePrevious?.addEventListener("click", () => changeCommandPage(-1));
+    commandPageNext?.addEventListener("click", () => changeCommandPage(1));
     layerButtons.forEach((button) => {
       button.addEventListener("click", () => {
         activeLayer = button.dataset.layerToggle;
