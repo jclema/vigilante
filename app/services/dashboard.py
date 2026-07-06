@@ -1159,6 +1159,9 @@ class DashboardService:
             place_id = DashboardService._place_id_from_maps_link(google_maps_uri)
         name = content.get("name") or content.get("address") or "Ubicacion observada"
         address = content.get("address")
+        coordinate_link = DashboardService._coordinate_maps_link(content, raw_payload)
+        if coordinate_link:
+            return coordinate_link
         if google_maps_uri and DashboardService._is_precise_maps_link(google_maps_uri):
             return google_maps_uri
         if place_id:
@@ -1172,11 +1175,17 @@ class DashboardService:
             query = " ".join(part for part in [str(name), str(address or "")] if part).strip()
             if query:
                 return f"https://www.google.com/maps/search/?api=1&query={quote(query)}"
-        latitude = content.get("latitude")
-        longitude = content.get("longitude")
-        if latitude is not None and longitude is not None:
-            return f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
         return None
+
+    @staticmethod
+    def _coordinate_maps_link(content: dict[str, object], raw_payload: dict[str, object] | None = None) -> str | None:
+        raw_payload = raw_payload or {}
+        location = raw_payload.get("location") if isinstance(raw_payload.get("location"), dict) else {}
+        latitude = content.get("latitude") or location.get("latitude")
+        longitude = content.get("longitude") or location.get("longitude")
+        if latitude is None or longitude is None:
+            return None
+        return f"https://www.google.com/maps/search/?api=1&query={quote(f'{latitude},{longitude}')}"
 
     @staticmethod
     def _place_id_maps_link(name: str | None, address: str | None, place_id: str) -> str:

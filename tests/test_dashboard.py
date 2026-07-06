@@ -177,7 +177,7 @@ def test_place_clone_case_detail_builds_comparison_panel():
     assert detail["clone_comparison"]["clone_name"]
     assert detail["clone_comparison"]["official_name"] == clone_case.dealer_name
     assert detail["clone_comparison"]["clone_maps_link"].startswith("https://www.google.com/maps")
-    assert "query_place_id=clone-bello-ui" in detail["clone_comparison"]["clone_maps_link"]
+    assert detail["clone_comparison"]["clone_maps_link"] == "https://www.google.com/maps/search/?api=1&query=6.3371%2C-75.5549"
     assert "query_place_id=place-official-bello" in detail["clone_comparison"]["official_maps_link"]
 
 
@@ -211,6 +211,25 @@ def test_maps_link_prefers_precise_google_cid_over_place_id():
     )
 
     assert link == "https://maps.google.com/?cid=5737355300905269745"
+
+
+def test_maps_link_prefers_coordinates_for_observed_places_with_unreliable_cid():
+    link = DashboardService._maps_link(
+        {
+            "raw_payload": {
+                "googleMapsUri": "https://maps.google.com/?cid=5737355300905269745",
+                "id": "ChIJ6yqsYgApRI4R8bmplD8un08",
+                "location": {"latitude": 6.177696, "longitude": -75.58995709999999},
+            },
+            "name": "Yamaha Principal Medellín",
+            "address": "Cra. 48 #055422, Cl. 32B Sur #29, Envigado",
+            "place_id": "ChIJ6yqsYgApRI4R8bmplD8un08",
+            "latitude": 6.177696,
+            "longitude": -75.58995709999999,
+        }
+    )
+
+    assert link == "https://www.google.com/maps/search/?api=1&query=6.177696%2C-75.58995709999999"
 
 
 def test_maps_link_recovers_query_place_id_from_google_maps_url():
@@ -367,7 +386,7 @@ def test_place_clone_case_detail_opens_timeline_and_related_by_default():
     response = client.get(f"/cases/{clone_case.id}")
 
     assert response.status_code == 200
-    assert 'query_place_id=clone-bello-open-sections" target="_blank" rel="noopener noreferrer"' in response.text
+    assert 'href="https://www.google.com/maps/search/?api=1&amp;query=6.3371%2C-75.5549" target="_blank" rel="noopener noreferrer"' in response.text
     assert '<summary>Ver línea de tiempo del caso</summary>' in response.text
     assert '<details class="follow-up-details" open>' in response.text
     assert "Ver otros casos de esta sede" in response.text
