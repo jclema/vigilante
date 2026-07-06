@@ -9,6 +9,36 @@ No es un sistema autonomo de enforcement. Hoy es un producto de operaciones asis
 - gestion operativa por red, concesionario y sede
 - preparacion de reportes con aprobacion humana
 
+## Produccion
+
+La aplicacion publica esta disponible en:
+
+- [https://www.watchmanhub.com](https://www.watchmanhub.com)
+
+La ruta publica de produccion es:
+
+```text
+Cloudflare
+  -> Google Cloud Global External Application Load Balancer
+  -> Cloud Armor
+  -> Serverless NEG
+  -> Cloud Run
+  -> Firestore y Cloud Storage
+```
+
+Controles activos:
+
+- TLS administrado para `watchmanhub.com` y `www.watchmanhub.com`
+- redireccion HTTP a HTTPS y dominio canonico en `www`
+- Cloud Run limitado a trafico interno y del Load Balancer
+- URL publica `run.app` bloqueada para acceso directo desde internet
+- Cloud Armor conectado con reglas administradas en preview
+- runtime y Cloud Scheduler con service accounts separadas
+- Scheduler autenticado con OIDC
+- secretos administrados con Secret Manager
+- cookies seguras y headers HTTP defensivos
+- datos demo desactivados en produccion
+
 ## Estado real del proyecto
 
 El producto ya paso de ser un prototipo generico a un piloto operativo con UI, casos, expediente, mapa territorial, jerarquia de red y rutas de integracion. Lo importante es esto:
@@ -168,7 +198,7 @@ Resultado:
 
 | Capacidad | Estado | Comentario |
 |---|---|---|
-| Login, roles y sesiones | Funcional | Demo y flujo Google conectados |
+| Login, roles y sesiones | Funcional | Google OAuth en produccion; demo solo local |
 | Dashboard operativo | Funcional | Vistas de plataforma, red y concesionario |
 | Territory map | Funcional | Enfoque operativo en alertas |
 | Gestion de casos | Funcional | Triage, expediente, timeline y operacion |
@@ -178,6 +208,10 @@ Resultado:
 | Browser enforcement guiado | Funcional con limites | Humano-in-the-loop |
 | Ingesta formal GBP en codigo | Funcional en software | Bloqueada externamente por Google |
 | Captura publica de fotos con Playwright | Experimental | No confiable en Cloud Run |
+
+La autenticacion publica usa `https://www.watchmanhub.com/auth/google/callback`.
+Las cuentas demo solo pertenecen al entorno local y sus credenciales conocidas
+son rechazadas en produccion.
 
 ## Lo que no funciona hoy
 
@@ -230,15 +264,17 @@ Hace falta dataset y rutina operativa para medir:
 - tiempo a decision
 - valor real por concesionario
 
-### P1. Persistencia y operacion productiva
+### P1. Operacion productiva
 
-Aunque ya existe soporte para Firestore y GCS, falta endurecer:
+Firestore, Cloud Storage, Secret Manager, Load Balancer e identidades separadas
+ya estan operativos. Falta completar:
 
 - retencion de evidencia
-- observabilidad
+- alertas y dashboards de observabilidad
 - auditoria
 - runbooks
 - recuperacion ante fallos externos
+- calibracion y enforcement final de Cloud Armor
 
 ## Plan actual recomendado
 
@@ -270,6 +306,8 @@ Si el negocio necesita validar fotos antes de esa aprobacion, conviene definir u
 ## Credenciales demo
 
 Las cuentas demo base viven en `app/services/demo_data.py`.
+Solo se cargan localmente cuando `SEED_DEMO_DATA=true`. Produccion exige
+`SEED_DEMO_DATA=false` y rechaza configuraciones inseguras durante el arranque.
 
 - `operator@vigilante.local` / `change-me`
 - `yamaha@vigilante.local` / `yamaha-demo`
