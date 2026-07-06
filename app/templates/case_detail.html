@@ -49,8 +49,8 @@
         <h2>{{ detail.playbook.headline }}</h2>
         <p>{{ detail.playbook.summary }}</p>
         <div class="hero-actions">
-          <a class="hero-link" href="{{ detail.command_center.primary_action.href }}">{{ detail.command_center.primary_action.label }}</a>
-          <a class="hero-link secondary" href="{{ detail.command_center.follow_up_action.href }}">{{ detail.command_center.follow_up_action.label }}</a>
+          <a class="hero-link" href="{{ detail.command_center.primary_action.href }}"{% if detail.command_center.primary_action.href.startswith('http') %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ detail.command_center.primary_action.label }}</a>
+          <a class="hero-link secondary" href="{{ detail.command_center.follow_up_action.href }}"{% if detail.command_center.follow_up_action.href.startswith('http') %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ detail.command_center.follow_up_action.label }}</a>
         </div>
         <div class="case-focus-board">
           <article class="case-focus-risk {{ detail.risk_tone }}">
@@ -99,10 +99,10 @@
           <p class="primary-evidence-summary">{{ detail.primary_evidence.summary }}</p>
           <div class="primary-evidence-actions threat-inline-actions">
             {% if detail.primary_evidence.maps_link %}
-            <a class="hero-link" href="{{ detail.primary_evidence.maps_link }}">📍 {{ detail.primary_evidence.maps_link_label or 'Abrir evidencia en Google Maps' }}</a>
+            <a class="hero-link" href="{{ detail.primary_evidence.maps_link }}" target="_blank" rel="noopener noreferrer">📍 {{ detail.primary_evidence.maps_link_label or 'Abrir evidencia en Google Maps' }}</a>
             {% endif %}
             {% if detail.primary_evidence.dealer_maps_link %}
-            <a class="hero-link secondary" href="{{ detail.primary_evidence.dealer_maps_link }}">🏍️ {{ detail.primary_evidence.dealer_maps_link_label or 'Contrastar con sede oficial' }}</a>
+            <a class="hero-link secondary" href="{{ detail.primary_evidence.dealer_maps_link }}" target="_blank" rel="noopener noreferrer">🏍️ {{ detail.primary_evidence.dealer_maps_link_label or 'Contrastar con sede oficial' }}</a>
             {% endif %}
           </div>
         </div>
@@ -154,7 +154,7 @@
               <div><dt>Rating</dt><dd>{% if detail.clone_comparison.clone_rating %}{{ detail.clone_comparison.clone_rating }}{% else %}Sin dato{% endif %}</dd></div>
             </dl>
             {% if detail.clone_comparison.clone_maps_link %}
-            <a class="hero-link" href="{{ detail.clone_comparison.clone_maps_link }}">📍 Abrir ficha del clon</a>
+            <a class="hero-link" href="{{ detail.clone_comparison.clone_maps_link }}" target="_blank" rel="noopener noreferrer">📍 Abrir ficha del clon</a>
             {% endif %}
           </article>
           <article class="intel-panel clone-comparison-card">
@@ -171,7 +171,7 @@
               <div><dt>Apareció en</dt><dd>{{ detail.clone_comparison.query_hits|join(', ') if detail.clone_comparison.query_hits else 'Sin histórico adicional' }}</dd></div>
             </dl>
             {% if detail.clone_comparison.official_maps_link %}
-            <a class="hero-link secondary" href="{{ detail.clone_comparison.official_maps_link }}">🏍️ Abrir ficha oficial</a>
+            <a class="hero-link secondary" href="{{ detail.clone_comparison.official_maps_link }}" target="_blank" rel="noopener noreferrer">🏍️ Abrir ficha oficial</a>
             {% endif %}
           </article>
         </div>
@@ -205,10 +205,10 @@
               <p>{{ artifact.summary }}</p>
               <div class="threat-inline-actions">
                 {% if artifact.maps_link %}
-                <a class="mini-link" href="{{ artifact.maps_link }}">📍 {{ artifact.maps_link_label or 'Abrir ficha en Google Maps' }}</a>
+                <a class="mini-link" href="{{ artifact.maps_link }}" target="_blank" rel="noopener noreferrer">📍 {{ artifact.maps_link_label or 'Abrir ficha en Google Maps' }}</a>
                 {% endif %}
                 {% if artifact.dealer_maps_link %}
-                <a class="mini-link" href="{{ artifact.dealer_maps_link }}">🏍️ {{ artifact.dealer_maps_link_label or 'Ver sede oficial' }}</a>
+                <a class="mini-link" href="{{ artifact.dealer_maps_link }}" target="_blank" rel="noopener noreferrer">🏍️ {{ artifact.dealer_maps_link_label or 'Ver sede oficial' }}</a>
                 {% endif %}
               </div>
               <details>
@@ -247,10 +247,10 @@
           </dl>
           <div class="threat-inline-actions">
             {% if detail.primary_evidence and detail.primary_evidence.maps_link %}
-            <a class="mini-link" href="{{ detail.primary_evidence.maps_link }}">📍 {{ detail.primary_evidence.maps_link_label or 'Abrir punto sospechoso' }}</a>
+            <a class="mini-link" href="{{ detail.primary_evidence.maps_link }}" target="_blank" rel="noopener noreferrer">📍 {{ detail.primary_evidence.maps_link_label or 'Abrir punto sospechoso' }}</a>
             {% endif %}
             {% if detail.primary_evidence and detail.primary_evidence.dealer_maps_link %}
-            <a class="mini-link" href="{{ detail.primary_evidence.dealer_maps_link }}">🏍️ {{ detail.primary_evidence.dealer_maps_link_label or 'Abrir sede oficial' }}</a>
+            <a class="mini-link" href="{{ detail.primary_evidence.dealer_maps_link }}" target="_blank" rel="noopener noreferrer">🏍️ {{ detail.primary_evidence.dealer_maps_link_label or 'Abrir sede oficial' }}</a>
             {% endif %}
           </div>
         </article>
@@ -455,10 +455,10 @@
                 {% endif %}
                 <div class="threat-inline-actions">
                   {% if detail.report_brief.report_url %}
-                  <a class="hero-link" href="{{ detail.report_brief.report_url }}">Abrir borrador para Google</a>
+                  <a class="hero-link" href="{{ detail.report_brief.report_url }}" target="_blank" rel="noopener noreferrer">Abrir borrador para Google</a>
                   {% endif %}
                   {% if detail.report_brief.evidence_links %}
-                  <a class="hero-link secondary" href="{{ detail.report_brief.evidence_links[0].url }}">Ver evidencia principal</a>
+                  <a class="hero-link secondary" href="{{ detail.report_brief.evidence_links[0].url }}" target="_blank" rel="noopener noreferrer">Ver evidencia principal</a>
                   {% endif %}
                 </div>
               </article>
@@ -512,8 +512,8 @@
         <small>{{ detail.google_status_label }}</small>
       </div>
       <div class="sticky-action-actions">
-        <a class="hero-link" href="{{ detail.sticky_actions.primary.href }}">{{ detail.sticky_actions.primary.label }}</a>
-        <a class="hero-link secondary" href="{{ detail.sticky_actions.follow_up.href }}">{{ detail.sticky_actions.follow_up.label }}</a>
+        <a class="hero-link" href="{{ detail.sticky_actions.primary.href }}"{% if detail.sticky_actions.primary.href.startswith('http') %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ detail.sticky_actions.primary.label }}</a>
+        <a class="hero-link secondary" href="{{ detail.sticky_actions.follow_up.href }}"{% if detail.sticky_actions.follow_up.href.startswith('http') %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ detail.sticky_actions.follow_up.label }}</a>
       </div>
     </div>
   </main>

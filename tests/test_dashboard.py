@@ -161,6 +161,7 @@ def test_place_clone_case_detail_builds_comparison_panel():
                 "latitude": 6.3371,
                 "longitude": -75.5549,
                 "place_id": "clone-bello-ui",
+                "google_maps_uri": "https://www.google.com/maps/@6.3371,-75.5549,17z",
                 "source_query": "yamaha principal bello",
                 "query_hits": ["yamaha bello", "yamaha principal bello"],
                 "rating": 4.1,
@@ -178,6 +179,33 @@ def test_place_clone_case_detail_builds_comparison_panel():
     assert detail["clone_comparison"]["clone_maps_link"].startswith("https://www.google.com/maps")
     assert "place/?q=place_id:clone-bello-ui" in detail["clone_comparison"]["clone_maps_link"]
     assert "place/?q=place_id:place-official-bello" in detail["clone_comparison"]["official_maps_link"]
+
+
+def test_maps_link_prefers_place_identity_over_generic_map_view():
+    link = DashboardService._maps_link(
+        {
+            "name": "Yamaha Bello Principal",
+            "address": "Diagonal 50 45-12, Bello",
+            "place_id": "clone-place-123",
+            "google_maps_uri": "https://www.google.com/maps/@6.3371,-75.5549,17z",
+        }
+    )
+
+    assert link == "https://www.google.com/maps/place/?q=place_id:clone-place-123"
+
+
+def test_maps_link_recovers_query_place_id_from_google_maps_url():
+    link = DashboardService._maps_link(
+        {
+            "name": "Yamaha Sports Calle 33",
+            "google_maps_uri": (
+                "https://www.google.com/maps/search/?api=1&query=Yamaha%20Sports"
+                "&query_place_id=ChIJstable123"
+            ),
+        }
+    )
+
+    assert link == "https://www.google.com/maps/place/?q=place_id:ChIJstable123"
 
 
 def test_review_photo_case_prioritizes_visual_evidence_over_google_report_draft():
@@ -319,6 +347,7 @@ def test_place_clone_case_detail_opens_timeline_and_related_by_default():
     response = client.get(f"/cases/{clone_case.id}")
 
     assert response.status_code == 200
+    assert 'href="https://www.google.com/maps/place/?q=place_id:clone-bello-open-sections" target="_blank" rel="noopener noreferrer"' in response.text
     assert '<summary>Ver línea de tiempo del caso</summary>' in response.text
     assert '<details class="follow-up-details" open>' in response.text
     assert "Ver otros casos de esta sede" in response.text
