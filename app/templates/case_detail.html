@@ -155,6 +155,8 @@
             </dl>
             {% if detail.clone_comparison.clone_maps_link %}
             <a class="hero-link" href="{{ detail.clone_comparison.clone_maps_link }}" target="_blank" rel="noopener noreferrer">📍 Abrir ficha del clon</a>
+            {% elif detail.clone_comparison.clone_maps_issue %}
+            <p class="case-muted-note">{{ detail.clone_comparison.clone_maps_issue }}</p>
             {% endif %}
           </article>
           <article class="intel-panel clone-comparison-card">

@@ -9676,6 +9676,17 @@ button:hover {
   border-color: rgba(245, 158, 11, 0.3);
 }
 
+.case-muted-note {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.82);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .browser-submit-form {
   margin-top: 1rem;
 }

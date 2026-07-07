@@ -1152,6 +1152,8 @@ class DashboardService:
     def _maps_link(content: dict[str, object] | None):
         if not content:
             return None
+        if content.get("maps_link_status") == "invalid_place_id" or content.get("place_id_status") == "invalid":
+            return None
         raw_payload = content.get("raw_payload") if isinstance(content.get("raw_payload"), dict) else {}
         google_maps_uri = str(content.get("google_maps_uri") or raw_payload.get("googleMapsUri") or "")
         place_id = content.get("place_id") or raw_payload.get("placeId")
@@ -1264,6 +1266,7 @@ class DashboardService:
             "clone_rating": content.get("rating"),
             "clone_reviews": content.get("user_rating_count"),
             "clone_maps_link": self._maps_link(content),
+            "clone_maps_issue": self._maps_issue(content),
             "official_name": official_name,
             "official_address": official_address,
             "official_phones": official_phones,
@@ -1273,6 +1276,14 @@ class DashboardService:
             "distance_m": distance_m,
             "reasons": reasons,
         }
+
+    @staticmethod
+    def _maps_issue(content: dict[str, object] | None) -> str | None:
+        if not content:
+            return None
+        if content.get("maps_link_status") == "invalid_place_id" or content.get("place_id_status") == "invalid":
+            return "Google ya no devuelve una ficha pública para este Place ID. El caso debe tratarse como evidencia histórica o resuelta."
+        return None
 
     @staticmethod
     def _distance_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> int:

@@ -350,6 +350,21 @@ def test_maps_link_uses_places_id_for_real_clone_cases_instead_of_cid_or_coordin
         assert "%2C-" not in link
 
 
+def test_maps_link_returns_none_for_invalid_place_id_evidence():
+    link = DashboardService._maps_link(
+        {
+            "name": "YamahaPrincipal Medellin",
+            "address": "Dirección cercana: Restaurante Pilimao´s, Cra. 52 #80 105 piso 3, Itagüí",
+            "place_id": "ChIJWXqU60uDRo4Rtfz8wWAfD_o",
+            "maps_link_status": "invalid_place_id",
+            "latitude": 6.1896448,
+            "longitude": -75.5933093,
+        }
+    )
+
+    assert link is None
+
+
 def test_maps_link_recovers_query_place_id_from_google_maps_url():
     link = DashboardService._maps_link(
         {
@@ -512,6 +527,48 @@ def test_place_clone_case_detail_opens_timeline_and_related_by_default():
     assert '<summary>Ver línea de tiempo del caso</summary>' in response.text
     assert '<details class="follow-up-details" open>' in response.text
     assert "Ver otros casos de esta sede" in response.text
+
+
+def test_place_clone_case_detail_warns_when_clone_place_id_is_invalid():
+    repo = InMemoryRepository()
+    repo.seed()
+    clone_case = ThreatCase(
+        id="case-clone-invalid-place",
+        title="Posible clon de Motoblu Itagüí",
+        dealer_id="dealer-itagui",
+        organization_id="org-dealer-itagui",
+        dealer_name="Motoblu Itagui",
+        city="Itagui",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_score=100,
+        risk_reasons=["El punto ya no está disponible en Google Maps."],
+        summary="Evidencia histórica de un punto que Google ya no devuelve.",
+        location_label="Itagui",
+        source_reference_id="ChIJinvalid",
+    )
+    repo.save_case(clone_case)
+    repo.save_evidence(
+        EvidenceArtifact(
+            id="evidence-clone-invalid-place",
+            case_id=clone_case.id,
+            artifact_type="observed_place",
+            label="YamahaPrincipal Medellin",
+            content={
+                "name": "YamahaPrincipal Medellin",
+                "address": "Dirección cercana: Restaurante Pilimao´s, Cra. 52 #80 105 piso 3, Itagüí",
+                "place_id": "ChIJinvalid",
+                "maps_link_status": "invalid_place_id",
+                "latitude": 6.1896448,
+                "longitude": -75.5933093,
+            },
+        )
+    )
+
+    detail = DashboardService(repo).case_detail(clone_case.id)
+
+    assert detail["clone_comparison"]["clone_maps_link"] is None
+    assert "Google ya no devuelve una ficha pública" in detail["clone_comparison"]["clone_maps_issue"]
 
 
 def test_archived_case_keeps_dismissed_status_suggestion_and_shows_in_archived_cards():
