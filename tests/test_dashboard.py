@@ -257,7 +257,7 @@ def test_maps_link_prefers_place_identity_over_generic_map_view():
     )
 
 
-def test_maps_link_prefers_precise_google_cid_over_place_id():
+def test_maps_link_prefers_place_id_over_google_cid():
     link = DashboardService._maps_link(
         {
             "raw_payload": {
@@ -270,7 +270,11 @@ def test_maps_link_prefers_precise_google_cid_over_place_id():
         }
     )
 
-    assert link == "https://maps.google.com/?cid=5737355300905269745"
+    assert link == (
+        "https://www.google.com/maps/search/?api=1&query=Yamaha%20Principal%20Medell%C3%ADn%20"
+        "Cra.%2048%20%23055422%2C%20Cl.%2032B%20Sur%20%2329%2C%20Envigado"
+        "&query_place_id=ChIJ6yqsYgApRI4R8bmplD8un08"
+    )
 
 
 def test_maps_link_prefers_google_place_identity_over_coordinates():
@@ -293,9 +297,57 @@ def test_maps_link_prefers_google_place_identity_over_coordinates():
     )
 
     assert link == (
-        "https://maps.google.com/?cid=18018655134564547765"
-        "&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+        "https://www.google.com/maps/search/?api=1&query=Yamaha%20Principal%20Medell%C3%ADn%20"
+        "Cra.%2048%20%23055422%2C%20Cl.%2032B%20Sur%20%2329%2C%20Envigado"
+        "&query_place_id=ChIJ6yqsYgApRI4R8bmplD8un08"
     )
+
+
+def test_maps_link_uses_places_id_for_real_clone_cases_instead_of_cid_or_coordinates():
+    for content, expected_place_id in [
+        (
+            {
+                "raw_payload": {
+                    "googleMapsUri": (
+                        "https://maps.google.com/?cid=18018655134564547765"
+                        "&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+                    ),
+                    "id": "ChIJWXqU60uDRo4Rtfz8wWAfD_o",
+                    "location": {"latitude": 6.1896448, "longitude": -75.5933093},
+                },
+                "place_id": "ChIJWXqU60uDRo4Rtfz8wWAfD_o",
+                "name": "YamahaPrincipal Medellin",
+                "address": "Dirección cercana: Restaurante Pilimao´s, Cra. 52 #80 105 piso 3, Itagüí",
+                "latitude": 6.1896448,
+                "longitude": -75.5933093,
+            },
+            "ChIJWXqU60uDRo4Rtfz8wWAfD_o",
+        ),
+        (
+            {
+                "raw_payload": {
+                    "googleMapsUri": (
+                        "https://maps.google.com/?cid=1770883537504059527"
+                        "&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+                    ),
+                    "id": "ChIJV61Z-IIpRI4Rh0CE3zFxkxg",
+                    "location": {"latitude": 6.2396842999999995, "longitude": -75.5834102},
+                },
+                "place_id": "ChIJV61Z-IIpRI4Rh0CE3zFxkxg",
+                "name": "Yamaha Sports Principal",
+                "address": "Cerca de Tecnishop - Motos Usadas, Av. 33 #65-30, Medellín",
+                "latitude": 6.2396842999999995,
+                "longitude": -75.5834102,
+            },
+            "ChIJV61Z-IIpRI4Rh0CE3zFxkxg",
+        ),
+    ]:
+        link = DashboardService._maps_link(content)
+
+        assert "query_place_id=" in link
+        assert expected_place_id in link
+        assert "cid=" not in link
+        assert "%2C-" not in link
 
 
 def test_maps_link_recovers_query_place_id_from_google_maps_url():
