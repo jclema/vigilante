@@ -152,7 +152,13 @@
               <div><dt>Categoría</dt><dd>{{ detail.clone_comparison.clone_category }}</dd></div>
               <div><dt>Reseñas</dt><dd>{% if detail.clone_comparison.clone_reviews %}{{ detail.clone_comparison.clone_reviews }}{% else %}Sin dato{% endif %}</dd></div>
               <div><dt>Rating</dt><dd>{% if detail.clone_comparison.clone_rating %}{{ detail.clone_comparison.clone_rating }}{% else %}Sin dato{% endif %}</dd></div>
+              <div><dt>Observado</dt><dd>{{ detail.clone_comparison.clone_observed_at or 'Sin fecha' }}</dd></div>
+              <div><dt>Place ID</dt><dd>{{ detail.clone_comparison.clone_place_id or 'Sin Place ID' }}</dd></div>
+              <div><dt>CID</dt><dd>{{ detail.clone_comparison.clone_cid or 'Sin CID' }}</dd></div>
             </dl>
+            {% if detail.clone_comparison.clone_maps_notice %}
+            <p class="case-muted-note">{{ detail.clone_comparison.clone_maps_notice }}</p>
+            {% endif %}
             {% if detail.clone_comparison.clone_maps_link %}
             <a class="hero-link" href="{{ detail.clone_comparison.clone_maps_link }}" target="_blank" rel="noopener noreferrer">📍 Abrir ficha del clon</a>
             {% elif detail.clone_comparison.clone_maps_issue %}

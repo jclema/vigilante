@@ -257,7 +257,7 @@ def test_maps_link_prefers_place_identity_over_generic_map_view():
     )
 
 
-def test_maps_link_prefers_place_id_over_google_cid():
+def test_maps_link_prefers_original_google_cid_for_observed_place_evidence():
     link = DashboardService._maps_link(
         {
             "raw_payload": {
@@ -270,14 +270,10 @@ def test_maps_link_prefers_place_id_over_google_cid():
         }
     )
 
-    assert link == (
-        "https://www.google.com/maps/search/?api=1&query=Yamaha%20Principal%20Medell%C3%ADn%20"
-        "Cra.%2048%20%23055422%2C%20Cl.%2032B%20Sur%20%2329%2C%20Envigado"
-        "&query_place_id=ChIJ6yqsYgApRI4R8bmplD8un08"
-    )
+    assert link == "https://maps.google.com/?cid=5737355300905269745"
 
 
-def test_maps_link_prefers_google_place_identity_over_coordinates():
+def test_maps_link_prefers_original_google_maps_uri_over_coordinates():
     link = DashboardService._maps_link(
         {
             "raw_payload": {
@@ -297,13 +293,12 @@ def test_maps_link_prefers_google_place_identity_over_coordinates():
     )
 
     assert link == (
-        "https://www.google.com/maps/search/?api=1&query=Yamaha%20Principal%20Medell%C3%ADn%20"
-        "Cra.%2048%20%23055422%2C%20Cl.%2032B%20Sur%20%2329%2C%20Envigado"
-        "&query_place_id=ChIJ6yqsYgApRI4R8bmplD8un08"
+        "https://maps.google.com/?cid=18018655134564547765"
+        "&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
     )
 
 
-def test_maps_link_uses_places_id_for_real_clone_cases_instead_of_cid_or_coordinates():
+def test_maps_link_uses_original_google_cid_for_real_clone_cases():
     for content, expected_place_id in [
         (
             {
@@ -344,10 +339,61 @@ def test_maps_link_uses_places_id_for_real_clone_cases_instead_of_cid_or_coordin
     ]:
         link = DashboardService._maps_link(content)
 
-        assert "query_place_id=" in link
-        assert expected_place_id in link
-        assert "cid=" not in link
-        assert "%2C-" not in link
+        assert "cid=" in link
+        assert expected_place_id not in link
+
+
+def test_clone_comparison_exposes_observed_place_identity_and_scan_context():
+    repo = InMemoryRepository()
+    repo.seed()
+    clone_case = ThreatCase(
+        id="case-clone-identity-context",
+        title="Posible clon de Motoblu Bello",
+        dealer_id="dealer-bello",
+        organization_id="org-dealer-bello",
+        dealer_name="Motoblu Bello",
+        city="Bello",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_score=88,
+        risk_reasons=["Teléfono observado distinto al oficial."],
+        summary="Caso de prueba.",
+        location_label="Diagonal 50 45-12, Bello",
+        source_reference_id="clone-bello-identity",
+    )
+    repo.save_case(clone_case)
+    repo.save_evidence(
+        EvidenceArtifact(
+            id="evidence-clone-identity-context",
+            case_id=clone_case.id,
+            artifact_type="observed_place",
+            label="Yamaha Bello Principal",
+            content={
+                "name": "Yamaha Bello Principal",
+                "address": "Diagonal 50 45-12, Bello",
+                "phone_number": "3019998888",
+                "category": "store",
+                "latitude": 6.3371,
+                "longitude": -75.5549,
+                "place_id": "clone-bello-identity",
+                "observed_at": "2026-04-01T22:00:29.226447Z",
+                "source_query": "yamaha bello",
+                "raw_payload": {
+                    "googleMapsUri": "https://maps.google.com/?cid=123456789",
+                    "nationalPhoneNumber": "3019998888",
+                },
+            },
+        )
+    )
+
+    detail = DashboardService(repo).case_detail(clone_case.id)
+
+    comparison = detail["clone_comparison"]
+    assert comparison["clone_maps_link"] == "https://maps.google.com/?cid=123456789"
+    assert comparison["clone_place_id"] == "clone-bello-identity"
+    assert comparison["clone_cid"] == "123456789"
+    assert comparison["clone_observed_at"] == "2026-04-01T22:00:29.226447Z"
+    assert "Google Maps puede fusionar" in comparison["clone_maps_notice"]
 
 
 def test_maps_link_returns_none_for_invalid_place_id_evidence():

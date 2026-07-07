@@ -1161,12 +1161,12 @@ class DashboardService:
             place_id = DashboardService._place_id_from_maps_link(google_maps_uri)
         name = content.get("name") or content.get("address") or "Ubicacion observada"
         address = content.get("address")
+        if google_maps_uri and DashboardService._is_precise_maps_link(google_maps_uri):
+            return google_maps_uri
         if google_maps_uri and DashboardService._has_query_place_id(google_maps_uri):
             return google_maps_uri
         if place_id:
             return DashboardService._place_maps_link(str(name), str(address or ""), str(place_id))
-        if google_maps_uri and DashboardService._is_precise_maps_link(google_maps_uri):
-            return google_maps_uri
         google_maps_uri = content.get("source_page_url")
         if google_maps_uri and DashboardService._is_precise_maps_link(str(google_maps_uri)):
             return str(google_maps_uri)
@@ -1207,6 +1207,14 @@ class DashboardService:
         return None
 
     @staticmethod
+    def _cid_from_maps_link(url: str | None) -> str | None:
+        if not url:
+            return None
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        return query.get("cid", [""])[0] or None
+
+    @staticmethod
     def _has_query_place_id(url: str) -> bool:
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
@@ -1241,12 +1249,16 @@ class DashboardService:
         if not observed:
             return None
         content = observed.content or {}
+        raw_payload = content.get("raw_payload") if isinstance(content.get("raw_payload"), dict) else {}
+        google_maps_uri = str(content.get("google_maps_uri") or raw_payload.get("googleMapsUri") or "")
         official_name = dealer.name if dealer else case.dealer_name
         official_address = dealer.address if dealer else case.location_label
         official_phones = dealer.phone_numbers if dealer else []
         clone_name = content.get("name") or observed.label or "Punto sospechoso"
         clone_address = content.get("address") or "Sin dirección visible"
         clone_phone = content.get("phone_number") or "Sin teléfono visible"
+        clone_place_id = content.get("place_id") or raw_payload.get("id") or raw_payload.get("placeId")
+        clone_cid = self._cid_from_maps_link(google_maps_uri)
         query_hits = content.get("query_hits") or []
         source_query = content.get("source_query")
         distance_m = None
@@ -1267,6 +1279,15 @@ class DashboardService:
             "clone_reviews": content.get("user_rating_count"),
             "clone_maps_link": self._maps_link(content),
             "clone_maps_issue": self._maps_issue(content),
+            "clone_place_id": clone_place_id,
+            "clone_cid": clone_cid,
+            "clone_observed_at": content.get("observed_at") or observed.created_at.isoformat(),
+            "clone_maps_notice": (
+                "Google Maps puede fusionar o redirigir fichas históricas. "
+                "Contrasta el teléfono observado, Place ID/CID y fecha del scan."
+                if clone_place_id or clone_cid
+                else None
+            ),
             "official_name": official_name,
             "official_address": official_address,
             "official_phones": official_phones,
