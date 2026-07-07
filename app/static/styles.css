@@ -10146,6 +10146,20 @@ body {
   filter: none;
 }
 
+.sidebar .brand-mark {
+  width: min(168px, 100%);
+  height: 48px;
+  place-items: center start;
+}
+
+.sidebar .brand-mark img {
+  width: 100%;
+  height: auto;
+  max-height: 48px;
+  object-fit: contain;
+  object-position: left center;
+}
+
 .brand-name,
 .brand-meta,
 .sidebar-signal strong,
