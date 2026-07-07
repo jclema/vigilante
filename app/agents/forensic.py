@@ -101,13 +101,15 @@ class ForensicAgent:
         place_phone = normalize_phone(place.phone_number or "")
         known_numbers = {normalize_phone(number) for number in dealer.phone_numbers}
         similarity = name_similarity(dealer.name, place.name)
+        address_match = bool(dealer_address and dealer_address in place_address)
+        distance: float | None = None
 
         if similarity >= 0.86:
             score += 35
         elif similarity >= 0.72:
             score += 20
 
-        if dealer_address and dealer_address in place_address:
+        if address_match:
             score += 35
 
         if place_phone and place_phone in known_numbers:
@@ -125,6 +127,15 @@ class ForensicAgent:
 
         if "yamaha" in place_name and "yamaha" in dealer_name:
             score += 5
+
+        if (
+            address_match
+            and distance is not None
+            and distance <= 0.05
+            and self._has_strong_suspicious_branding(place)
+            and self._has_official_brand_overlap(dealer, place)
+        ):
+            score += 10
 
         return score
 
@@ -288,6 +299,11 @@ class ForensicAgent:
         }
         place_terms = set(normalize_name(place.name).split())
         return bool(dealer_terms.intersection(place_terms))
+
+    def _has_official_brand_overlap(self, dealer: AuthorizedDealer, place: ObservedPlace) -> bool:
+        dealer_terms = set(normalize_name(dealer.name).split())
+        place_terms = set(normalize_name(place.name).split())
+        return "yamaha" in dealer_terms and "yamaha" in place_terms
 
     def _looks_like_colocated_alias(self, dealer: AuthorizedDealer, place: ObservedPlace) -> bool:
         place_name = normalize_name(place.name)

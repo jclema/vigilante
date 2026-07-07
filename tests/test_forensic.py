@@ -7,7 +7,7 @@ from app.agents.forensic import (
     normalize_name,
     normalize_phone,
 )
-from app.models import ObservedAsset, ObservedPlace, SourceType
+from app.models import AuthorizedDealer, ObservedAsset, ObservedPlace, SourceType
 from app.services.demo_data import demo_dealers
 
 
@@ -75,6 +75,34 @@ def test_official_match_detects_real_dealer():
     assert forensic.looks_like_official_place(dealer, place) is True
     score, _ = forensic.score_place(dealer, place)
     assert score < 40
+
+
+def test_official_match_accepts_incolmotos_yamaha_alias_at_exact_official_site():
+    dealer = AuthorizedDealer(
+        id="dealer-incolmotos-pdv-centro",
+        organization_id="org-incolmotos",
+        name="Incolmotos Yamaha",
+        city="Medellin",
+        address="CL 37 # 45-65",
+        phone_numbers=["6042321316", "6042326006", "3104424205"],
+        latitude=6.2372118,
+        longitude=-75.5709811,
+    )
+    place = ObservedPlace(
+        id="p-incolmotos-official",
+        place_id="ChIJuW-GbQApRI4RgonrTqEC5Os",
+        name="YAMAHA PRINCIPAL SAN DIEGO LA CANDELARIA",
+        address="Cl. 37 #45-65, La Candelaria, Medellin, Antioquia, Colombia",
+        phone_number="300 1154464",
+        category="store",
+        latitude=6.2372118,
+        longitude=-75.5709811,
+        source_query="yamaha principal medellin",
+        query_rank=2,
+    )
+    assessment = ForensicAgent().classify_place(dealer, place)
+    assert assessment.classification == "official_match"
+    assert assessment.should_open_case is False
 
 
 def test_score_place_works_without_coordinates():
