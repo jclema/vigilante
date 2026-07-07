@@ -1,0 +1,32 @@
+schema: spec-driven
+
+context: |
+  Project: Vigilante / WatchmanHub.
+  Product: FastAPI pilot for detecting impersonation of authorized dealers on Google Maps, Google Business Profile, and Google Places.
+  Current production URL: https://www.watchmanhub.com.
+  Stack: Python 3.11+, FastAPI, Jinja server-rendered UI, Pydantic, Firestore, Cloud Storage, Cloud Run, Cloud Scheduler, Cloud Armor, Secret Manager.
+  Repo commands: make setup, make run, make test, make lint, make build, make smoke, make check.
+  Source of truth for agent rules: ai-specs/docs/base-standards.md.
+  Product context: ai-specs/docs/product-context.md.
+  Current project docs: README.md, docs/watchmanhub-production-runbook.md, docs/google-cloud-pilot.md, docs/experimental-browser-capture.md, docs/gbp-access-matrix-guide.md.
+  Operating model: the system prepares evidence and recommendations; humans decide irreversible reporting or enforcement.
+  Reliability boundary: Google APIs, Places data, GBP access, public Maps pages, browser automation, webhooks, and outbound notifications are unreliable external boundaries.
+  Security boundary: preserve organization-level authorization, evidence provenance, secure sessions, production/demo separation, and secret hygiene.
+
+rules:
+  proposal:
+    - State the business or operational outcome, not only the implementation request.
+    - Include explicit non-goals when the change touches reporting, enforcement, persistence, infrastructure, or Google integrations.
+    - Name affected OpenSpec capabilities in kebab-case.
+  specs:
+    - Requirements must be behavior-level, observable, and written with SHALL or MUST.
+    - Every requirement needs at least one GIVEN/WHEN/THEN scenario.
+    - Keep implementation details in design.md, not in requirements.
+    - Any change touching evidence, scoring, authorization, retention, reporting, or external enforcement must include failure and human-review scenarios.
+  design:
+    - Reference existing repo modules and docs before proposing new abstractions.
+    - Include security, observability, rollback, and external-service failure handling when relevant.
+  tasks:
+    - Prefer small vertical slices that can be tested end-to-end.
+    - Each task must include an explicit verification command or manual check.
+    - Use make check for code changes; docs/spec-only changes must at least run OpenSpec validation.

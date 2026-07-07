@@ -394,11 +394,33 @@ Nunca guardar credenciales, service accounts, evidencia real ni `storage_state` 
 ## Documentacion clave
 
 - [`AGENTS.md`](AGENTS.md): mapa rapido del repo para agentes.
+- [`openspec/specs`](openspec/specs): specs vivos del producto y comportamiento esperado.
+- [`openspec/changes`](openspec/changes): cambios Spec-Driven Development activos y archivados.
+- [`ai-specs/docs/base-standards.md`](ai-specs/docs/base-standards.md): reglas portables para agentes.
+- [`ai-specs/docs/product-context.md`](ai-specs/docs/product-context.md): contexto de producto, usuarios y oportunidad.
 - [`docs/google-cloud-pilot.md`](docs/google-cloud-pilot.md): checklist de despliegue del piloto.
 - [`docs/watchmanhub-production-runbook.md`](docs/watchmanhub-production-runbook.md): operacion, diagnostico y rollback de produccion.
 - [`docs/gbp-access-matrix-guide.md`](docs/gbp-access-matrix-guide.md): levantamiento de acceso GBP.
 - [`docs/experimental-browser-capture.md`](docs/experimental-browser-capture.md): limites y uso del scraper experimental.
 - [`Agente IA Anti-Phishing Google Maps.md`](Agente%20IA%20Anti-Phishing%20Google%20Maps.md): investigacion y propuesta original.
+
+## Spec-Driven Development
+
+Vigilante usa OpenSpec como capa viva de especificaciones. Para cambios no
+triviales de producto, comportamiento, integraciones, seguridad, operaciones o
+arquitectura:
+
+```bash
+/opsx:explore
+/opsx:propose <change-name>
+/opsx:apply <change-name>
+npx --yes @fission-ai/openspec@latest validate --all --no-interactive
+/opsx:archive <change-name>
+```
+
+La regla practica: si el cambio afecta casos, evidencia, scoring, permisos,
+reportes, GBP, Places, operaciones productivas o experiencia principal, primero
+debe quedar expresado como spec con criterios de aceptacion y escenarios.
 
 ## Regla de entrega
 

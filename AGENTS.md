@@ -23,6 +23,8 @@ operations dashboard.
 - `infra/terraform/`: Google Cloud infrastructure.
 - `docs/`: operational guides and project knowledge.
 - `docs/plans/active/`: approved work that is not finished.
+- `openspec/`: living specs and change artifacts for spec-driven development.
+- `ai-specs/`: portable rules, agent definitions, and workflow skills.
 
 ## Canonical commands
 
@@ -37,11 +39,23 @@ make format      # format Python files
 make build       # build wheel and source distribution
 make smoke       # boot the app and probe the login page
 make check       # lint, tests, package build, and compile checks
+npx --yes @fission-ai/openspec@latest validate --all --no-interactive
 ```
+
+## Spec-driven workflow
+
+- Use `openspec/` for non-trivial product, behavior, architecture, operations,
+  security, or integration changes.
+- Start vague opportunities with `/opsx:explore`.
+- Start scoped changes with `/opsx:propose <change-name>`.
+- Implement only after proposal, specs, design, and tasks are coherent.
+- Read `ai-specs/docs/base-standards.md` and `ai-specs/docs/product-context.md`
+  before creating or applying OpenSpec changes.
 
 ## Working agreements
 
 - Read the relevant tests and docs before changing behavior.
+- Read relevant OpenSpec artifacts before implementing non-trivial behavior.
 - Implement small vertical slices and keep tests green.
 - Add or update tests for behavior changes.
 - Treat external Google APIs and browser automation as unreliable boundaries.
@@ -74,8 +88,10 @@ Never:
 ## Current operational references
 
 - `README.md`: local setup and current pilot scope.
+- `openspec/specs/`: living product and behavior specs.
+- `ai-specs/docs/base-standards.md`: portable SDD rules for agents.
+- `ai-specs/docs/product-context.md`: product strategy and operating context.
 - `docs/google-cloud-pilot.md`: deployment checklist.
 - `docs/experimental-browser-capture.md`: experimental capture limitations.
 - `docs/gbp-access-matrix-guide.md`: GBP onboarding data.
 - `Agente IA Anti-Phishing Google Maps.md`: original product and threat model.
-
