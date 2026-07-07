@@ -14,8 +14,13 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Install
         run: make setup
+      - name: Validate OpenSpec
+        run: npx --yes @fission-ai/openspec@latest validate --all --no-interactive
       - name: Check
         run: make check
       - name: Smoke test
