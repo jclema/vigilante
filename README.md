@@ -398,6 +398,7 @@ Nunca guardar credenciales, service accounts, evidencia real ni `storage_state` 
 - [`openspec/changes`](openspec/changes): cambios Spec-Driven Development activos y archivados.
 - [`ai-specs/docs/base-standards.md`](ai-specs/docs/base-standards.md): reglas portables para agentes.
 - [`ai-specs/docs/product-context.md`](ai-specs/docs/product-context.md): contexto de producto, usuarios y oportunidad.
+- [`docs/onboarding/developer-onboarding.md`](docs/onboarding/developer-onboarding.md): onboarding en ingles para developers externos.
 - [`docs/google-cloud-pilot.md`](docs/google-cloud-pilot.md): checklist de despliegue del piloto.
 - [`docs/watchmanhub-production-runbook.md`](docs/watchmanhub-production-runbook.md): operacion, diagnostico y rollback de produccion.
 - [`docs/gbp-access-matrix-guide.md`](docs/gbp-access-matrix-guide.md): levantamiento de acceso GBP.
