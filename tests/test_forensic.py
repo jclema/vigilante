@@ -105,6 +105,62 @@ def test_official_match_accepts_incolmotos_yamaha_alias_at_exact_official_site()
     assert assessment.should_open_case is False
 
 
+def test_official_match_accepts_san_juan_address_abbreviation_from_official_source():
+    dealer = AuthorizedDealer(
+        id="dealer-mundo-yamaha-san-juan",
+        organization_id="org-dealer-guayabal",
+        name="Mundo Yamaha San Juan",
+        city="Medellin",
+        address="CRA 73 44 10",
+        phone_numbers=["6044443132", "6044128488"],
+        latitude=6.249831,
+        longitude=-75.592213,
+    )
+    place = ObservedPlace(
+        id="p-san-juan-official",
+        place_id="ChIJqYLPQwApRI4RGk0vK9kqs8Q",
+        name="Yamaha principal San Juan Medellin",
+        address="Cra. 73 #44-10, Laureles - Estadio, Medellin, Antioquia, Colombia",
+        phone_number="315 3767434",
+        category="store",
+        latitude=6.249737,
+        longitude=-75.592145,
+        source_query="yamaha principal medellin",
+        query_rank=1,
+    )
+    assessment = ForensicAgent().classify_place(dealer, place)
+    assert assessment.classification == "official_match"
+    assert assessment.should_open_case is False
+
+
+def test_official_match_accepts_yamaha_sports_av_33_same_official_address():
+    dealer = AuthorizedDealer(
+        id="dealer-yamaha-sports-calle-33",
+        organization_id="org-yamaha-sports",
+        name="Yamaha Sports",
+        city="Medellin",
+        address="CL 33 65 50",
+        phone_numbers=["6043513667", "6043513666"],
+        latitude=6.239376,
+        longitude=-75.583563,
+    )
+    place = ObservedPlace(
+        id="p-yamaha-sports-official",
+        place_id="ChIJV2SeMQApRI4R1-_mAZJ2WHY",
+        name="Yamaha sport av 33 medellin",
+        address="Av. 33 #65-50, Laureles - Estadio, Medellin, Antioquia, Colombia",
+        phone_number="301 9588501",
+        category="store",
+        latitude=6.2396245,
+        longitude=-75.583594,
+        source_query="yamaha medellin",
+        query_rank=1,
+    )
+    assessment = ForensicAgent().classify_place(dealer, place)
+    assert assessment.classification == "official_match"
+    assert assessment.should_open_case is False
+
+
 def test_score_place_works_without_coordinates():
     dealer = demo_dealers()[0]
     dealer.latitude = None

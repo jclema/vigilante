@@ -41,6 +41,36 @@ def normalize_name(value: str) -> str:
     return normalized
 
 
+def normalize_address(value: str) -> str:
+    normalized = normalize_name(value)
+    replacements = {
+        "cra": "carrera",
+        "cr": "carrera",
+        "crr": "carrera",
+        "cl": "calle",
+        "cll": "calle",
+        "av": "avenida",
+        "avda": "avenida",
+        "aven": "avenida",
+    }
+    tokens = [replacements.get(token, token) for token in normalized.split()]
+    return " ".join(tokens)
+
+
+def address_number_core(value: str) -> tuple[str, ...]:
+    return tuple(re.findall(r"\d+", normalize_address(value))[:3])
+
+
+def official_address_matches(dealer_address: str, place_address: str) -> bool:
+    dealer_normalized = normalize_address(dealer_address)
+    place_normalized = normalize_address(place_address)
+    if dealer_normalized and dealer_normalized in place_normalized:
+        return True
+    dealer_core = address_number_core(dealer_address)
+    place_core = address_number_core(place_address)
+    return len(dealer_core) >= 3 and dealer_core == place_core
+
+
 def normalize_phone(value: str) -> str:
     digits = re.sub(r"\D", "", value)
     if digits.startswith("57") and len(digits) > 10:
@@ -96,12 +126,11 @@ class ForensicAgent:
         score = 0
         place_name = normalize_name(place.name)
         dealer_name = normalize_name(dealer.name)
-        place_address = normalize_name(place.address)
-        dealer_address = normalize_name(dealer.address)
+        place_address = normalize_address(place.address)
         place_phone = normalize_phone(place.phone_number or "")
         known_numbers = {normalize_phone(number) for number in dealer.phone_numbers}
         similarity = name_similarity(dealer.name, place.name)
-        address_match = bool(dealer_address and dealer_address in place_address)
+        address_match = official_address_matches(dealer.address, place.address)
         distance: float | None = None
 
         if similarity >= 0.86:
@@ -134,6 +163,15 @@ class ForensicAgent:
             and distance <= 0.05
             and self._has_strong_suspicious_branding(place)
             and self._has_official_brand_overlap(dealer, place)
+        ):
+            score += 10
+
+        if (
+            address_match
+            and distance is not None
+            and distance <= 0.05
+            and self._has_official_brand_overlap(dealer, place)
+            and self._place_name_mentions_address_core(dealer, place)
         ):
             score += 10
 
@@ -305,6 +343,10 @@ class ForensicAgent:
         place_terms = set(normalize_name(place.name).split())
         return "yamaha" in dealer_terms and "yamaha" in place_terms
 
+    def _place_name_mentions_address_core(self, dealer: AuthorizedDealer, place: ObservedPlace) -> bool:
+        place_terms = set(re.findall(r"\d+", normalize_name(place.name)))
+        return bool(place_terms.intersection(address_number_core(dealer.address)))
+
     def _looks_like_colocated_alias(self, dealer: AuthorizedDealer, place: ObservedPlace) -> bool:
         place_name = normalize_name(place.name)
         dealer_city = normalize_name(dealer.city)
@@ -410,7 +452,7 @@ class ForensicAgent:
             score += 12
         if "principal" not in place_name and "oficial" not in place_name:
             score += 4
-        if normalize_name(dealer.city) not in place_name and normalize_name(dealer.address) not in normalize_name(place.address):
+        if normalize_name(dealer.city) not in place_name and not official_address_matches(dealer.address, place.address):
             score += 2
         return min(score, 34)
 
@@ -420,7 +462,7 @@ class ForensicAgent:
         known_numbers = {normalize_phone(number) for number in dealer.phone_numbers}
         if place_phone and place_phone not in known_numbers:
             score += 20
-        if normalize_name(dealer.address) not in normalize_name(place.address):
+        if not official_address_matches(dealer.address, place.address):
             score += 8
         if place.category and place.category != "motorcycle_dealer":
             score += 6
