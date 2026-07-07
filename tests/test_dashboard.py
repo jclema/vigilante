@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.models import EvidenceArtifact, MonitoringMode, Organization, OrganizationType, SourceType, ThreatCase
+from app.models import EvidenceArtifact, MonitoringMode, Organization, OrganizationType, RiskBucket, SourceType, ThreatCase
 from app.agents.forensic import ForensicAgent
 from app.agents.reporter import ReporterAgent
 from app.agents.scout import ScoutAgent
@@ -52,6 +52,7 @@ def test_dashboard_sections_have_expected_shape():
     assert sections["threats"]["cards"][0]["dealer_maps_link"].startswith("https://www.google.com/maps")
     assert sections["threats"]["cards"][0]["identified_at"].endswith("COT")
     assert sections["threats"]["cards"][0]["observed_name"]
+    assert len(sections["threats"]["active_cards"]) == int(sections["executive"]["highlights"][0]["value"])
     assert len(sections["threats"]["filters"]["cities"]) >= 1
 
 
@@ -62,10 +63,55 @@ def test_command_alerts_are_sorted_by_risk():
     scout.run_public_scan("yamaha medellin", suspicious_places())
     scout.process_gbp_event(suspicious_assets()[0])
 
-    cards = DashboardService(repo).threat_summary()["cards"]
+    cards = DashboardService(repo).threat_summary()["active_cards"]
     scores = [card["case"].risk_score for card in cards]
 
     assert scores == sorted(scores, reverse=True)
+
+
+def test_command_alerts_include_watchlist_cases_in_primary_feed():
+    repo = InMemoryRepository()
+    repo.seed()
+    primary_case = ThreatCase(
+        id="case-primary-active",
+        title="Foto sospechosa en Motoblu Bello",
+        dealer_id="dealer-bello",
+        organization_id="org-dealer-bello",
+        dealer_name="Motoblu Bello",
+        city="Bello",
+        monitoring_mode=MonitoringMode.GBP_PUSH,
+        source_type=SourceType.OFFICIAL_PROFILE_UPDATE,
+        risk_score=90,
+        risk_reasons=["Teléfono observado distinto al oficial."],
+        summary="Debe aparecer en el feed principal.",
+        location_label="Bello",
+        source_reference_id="asset-primary-active",
+    )
+    watchlist_case = ThreatCase(
+        id="case-watchlist-active",
+        title="Watchlist de alto riesgo de Yamaha Copacabana",
+        dealer_id="dealer-itagui",
+        organization_id="org-dealer-itagui",
+        dealer_name="Yamaha Copacabana",
+        city="Copacabana",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_bucket=RiskBucket.HIGH_RISK_WATCHLIST,
+        risk_score=90,
+        risk_reasons=["Punto cercano con teléfono distinto."],
+        summary="También debe aparecer en el feed principal.",
+        location_label="Copacabana",
+        source_reference_id="place-watchlist-active",
+    )
+    repo.save_case(primary_case)
+    repo.save_case(watchlist_case)
+
+    summary = DashboardService(repo).threat_summary()
+
+    assert {card["case"].id for card in summary["active_cards"]} == {"case-primary-active", "case-watchlist-active"}
+    assert len(summary["cards"]) == 1
+    assert len(summary["watchlist_cards"]) == 1
+    assert summary["filters"]["cities"] == ["Bello", "Copacabana"]
 
 
 def test_legacy_motoblu_itagui_case_resolves_to_motoblu_organization():

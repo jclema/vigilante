@@ -113,7 +113,7 @@
           <div class="command-filter-summary" data-filter-summary>Ordenadas por riesgo.</div>
 
           <div class="command-alert-list" data-threat-list>
-            {% for card in sections.threats.cards %}
+            {% for card in sections.threats.active_cards %}
             {% set case = card.case %}
             {% if case.status != 'dismissed' %}
             <button

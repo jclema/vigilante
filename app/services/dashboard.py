@@ -299,9 +299,15 @@ class DashboardService:
         )
         cards = [self._threat_card(case) for case in primary_cases]
         watchlist_cards = [self._threat_card(case) for case in watchlist_cases]
+        active_cards = sorted(
+            [*cards, *watchlist_cards],
+            key=lambda card: (card["case"].risk_score, card["case"].updated_at),
+            reverse=True,
+        )
         return {
             "cases": cases,
             "cards": cards,
+            "active_cards": active_cards,
             "watchlist_cards": watchlist_cards,
             "archived_cards": [self._archived_case_card(case) for case in archived_cases[:6]],
             "archived_history": [self._archived_case_card(case) for case in archived_cases],
@@ -310,7 +316,7 @@ class DashboardService:
             "archived_count": len(archived_cases),
             "watchlist_count": len(watchlist_cards),
             "filters": {
-                "cities": sorted({card["city"] for card in cards}),
+                "cities": sorted({card["city"] for card in active_cards}),
                 "statuses": sorted({self._labelize_value(case.status.value) for case in cases}),
                 "priorities": ["Critico", "Alto", "Medio", "Bajo"],
             },
