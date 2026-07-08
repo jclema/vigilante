@@ -416,6 +416,7 @@ Never commit credentials, service accounts, real evidence, or browser
 - [`ai-specs/docs/base-standards.md`](ai-specs/docs/base-standards.md): portable rules for agents.
 - [`ai-specs/docs/product-context.md`](ai-specs/docs/product-context.md): product context, users, and opportunity.
 - [`docs/onboarding/developer-onboarding.md`](docs/onboarding/developer-onboarding.md): English onboarding for external developers.
+- [`docs/agile-governance.md`](docs/agile-governance.md): lightweight risk-based governance.
 - [`docs/google-cloud-pilot.md`](docs/google-cloud-pilot.md): pilot deployment checklist.
 - [`docs/watchmanhub-production-runbook.md`](docs/watchmanhub-production-runbook.md): production operation, diagnostics, and rollback.
 - [`docs/gbp-access-matrix-guide.md`](docs/gbp-access-matrix-guide.md): GBP access intake.
