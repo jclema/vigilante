@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import hashlib
 import mimetypes
 from pathlib import Path
-from urllib.parse import quote, urlencode
+from time import monotonic
+from urllib.parse import quote, urlencode, urlsplit
 import re
 from urllib.error import HTTPError
 from datetime import datetime, UTC
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -46,12 +48,15 @@ from app.services.evidence_media import EvidenceMediaService
 from app.services.gbp_media import GbpCustomerMediaClient, GbpCustomerMediaIngestService, GbpOrganizationConnectionResolver
 from app.services.multi_source_ingest import EvidenceIngestionRequest, MultiSourceEvidenceIngestService
 from app.services.notifications import NotificationService
+from app.services.organization_resolution import resolve_case_organization_id
 from app.services.places import places_search_service
 from app.store import repository
 
 
 BASE_DIR = Path(__file__).resolve().parent
+ASSET_VERSION = hashlib.sha256((BASE_DIR / "static" / "styles.css").read_bytes()).hexdigest()[:12]
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+login_attempts: dict[str, list[float]] = {}
 
 
 @asynccontextmanager
@@ -91,7 +96,22 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
+    unsafe_method = request.method in {"POST", "PUT", "PATCH", "DELETE"}
+    machine_endpoint = request.url.path == "/api/scans/run" or request.url.path.startswith("/api/webhooks/")
+    if settings.is_production and unsafe_method and not machine_endpoint:
+        source = request.headers.get("origin") or request.headers.get("referer")
+        parsed_source = urlsplit(source) if source else None
+        trusted_source = bool(
+            parsed_source
+            and parsed_source.scheme == "https"
+            and parsed_source.hostname == request.url.hostname
+        )
+        if not trusted_source:
+            response = JSONResponse({"detail": "Invalid request origin"}, status_code=403)
+        else:
+            response = await call_next(request)
+    else:
+        response = await call_next(request)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "base-uri 'self'; "
@@ -264,6 +284,7 @@ def _base_context(request: Request) -> dict[str, object]:
     active_org = repository.get_organization(actor.active_organization_id) if actor and actor.active_organization_id else None
     return {
         "app_name": settings.app_name,
+        "asset_version": ASSET_VERSION,
         "current_actor": actor,
         "active_organization": active_org,
     }
@@ -883,7 +904,7 @@ async def settings_page(request: Request) -> HTMLResponse:
     selected_dealer_rows = []
     if selected_org_id:
         selected_dealers = sorted(
-            [dealer for dealer in repository.dealers.values() if dealer.organization_id == selected_org_id],
+            [dealer for dealer in all_dealers if dealer.organization_id == selected_org_id],
             key=lambda item: item.name.lower(),
         )
         profiles_by_dealer = {profile.dealer_id: profile for profile in profiles_for_selected_org}
@@ -908,11 +929,9 @@ async def settings_page(request: Request) -> HTMLResponse:
     selected_cases_for_org = []
     customer_media_summary = _customer_media_summary_for_organization(selected_org_id)
     if selected_org_id:
+        dealers_by_id = {dealer.id: dealer for dealer in all_dealers}
         for case in repository.list_cases():
-            case_org_id = case.organization_id
-            if not case_org_id and case.dealer_id:
-                dealer = repository.dealers.get(case.dealer_id)
-                case_org_id = dealer.organization_id if dealer else None
+            case_org_id = resolve_case_organization_id(case, dealers_by_id)
             if case_org_id == selected_org_id:
                 selected_cases_for_org.append(case)
         selected_cases_for_org.sort(key=lambda item: (item.status.value, -item.risk_score))
@@ -946,10 +965,27 @@ async def settings_page(request: Request) -> HTMLResponse:
 
 @app.post("/auth/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
+    normalized_email = email.strip().lower()
+    client_ip = request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "unknown")
+    attempt_key = f"{client_ip}:{normalized_email}"
+    if settings.is_production:
+        now = monotonic()
+        cutoff = now - settings.login_rate_limit_window_seconds
+        recent_attempts = [attempt for attempt in login_attempts.get(attempt_key, []) if attempt >= cutoff]
+        login_attempts[attempt_key] = recent_attempts
+        if len(recent_attempts) >= settings.login_rate_limit_attempts:
+            return JSONResponse(
+                {"detail": "Too many login attempts"},
+                status_code=429,
+                headers={"Retry-After": str(settings.login_rate_limit_window_seconds)},
+            )
     try:
-        actor = auth_service().login(email=email, password=password)
+        actor = auth_service().login(email=normalized_email, password=password)
     except ValueError as exc:
+        if settings.is_production:
+            login_attempts.setdefault(attempt_key, []).append(monotonic())
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    login_attempts.pop(attempt_key, None)
     auth_service().persist_session(request, actor)
     target = "/" if actor.active_organization_id or actor.can_view_network else "/select-organization"
     return RedirectResponse(url=target, status_code=303)

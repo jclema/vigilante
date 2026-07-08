@@ -42,6 +42,7 @@ include = ["app*"]
 app = [
   "static/*.css",
   "static/*.svg",
+  "static/*.png",
   "static/*.webp",
   "templates/*.html",
 ]

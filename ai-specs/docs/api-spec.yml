@@ -1,0 +1,39 @@
+openapi: 3.0.3
+info:
+  title: Vigilante Internal API Map
+  version: 0.1.0
+  description: >
+    Lightweight API map for OpenSpec context. FastAPI route definitions remain
+    the source of truth in app/main.py.
+paths:
+  /login:
+    get:
+      summary: Render login page
+      responses:
+        "200":
+          description: Login page rendered
+  /healthz:
+    get:
+      summary: Public health check
+      responses:
+        "200":
+          description: Service is healthy
+  /readyz:
+    get:
+      summary: Readiness check
+      responses:
+        "200":
+          description: Service is ready
+  /api/scans/run:
+    post:
+      summary: Trigger public scan workflow
+      description: Used by trusted scheduler or authorized internal callers.
+      responses:
+        "200":
+          description: Scan accepted or completed
+  /api/cases:
+    get:
+      summary: List cases visible to the authenticated organization context
+      responses:
+        "200":
+          description: Case list response

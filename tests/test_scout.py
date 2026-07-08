@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 from app.agents.forensic import ForensicAgent
 from app.agents.scout import ScoutAgent
-from app.models import CaseStatus, ObservedPlace, RiskBucket, SourceType
+from app.models import CaseStatus, MonitoringMode, ObservedPlace, RiskBucket, SourceType, ThreatCase
 from app.store import InMemoryRepository
 
 
@@ -84,6 +84,55 @@ def test_public_scan_keeps_legit_non_official_workshop_out_of_cases():
     assert scan.notes is not None
     assert "no oficiales" in scan.notes
     assert repo.list_cases() == []
+
+
+def test_public_scan_dismisses_existing_case_when_place_is_reclassified_as_legit():
+    repo = InMemoryRepository()
+    repo.seed()
+    scout = ScoutAgent(repo, ForensicAgent())
+    existing = ThreatCase(
+        id="case-stale-legit-place",
+        title="Posible clon de Motoblu Bello",
+        dealer_id="dealer-bello",
+        dealer_name="Motoblu Bello",
+        city="Bello",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        status=CaseStatus.REPORTED,
+        source_type=SourceType.PLACE_CLONE,
+        source_reference_id="taller-bello-1",
+        risk_score=86,
+        risk_reasons=["Clasificación histórica como posible clon."],
+        summary="Caso histórico pendiente de revalidación.",
+        location_label="Carrera 54 51-33, Bello",
+    )
+    repo.save_case(existing)
+
+    scan = scout.run_public_scan(
+        "yamaha bello",
+        [
+            ObservedPlace(
+                id="obs-legit-rescan",
+                place_id="taller-bello-1",
+                name="Taller Yamaha Bello",
+                address="Carrera 54 51-33, Bello",
+                phone_number="6045552233",
+                category="motorcycle_repair_shop",
+                latitude=6.3338,
+                longitude=-75.5571,
+                source_query="yamaha bello",
+                query_rank=6,
+                user_rating_count=47,
+                rating=4.6,
+                first_seen_at=datetime.now(UTC) - timedelta(days=420),
+            )
+        ],
+    )
+
+    updated = repo.get_case(existing.id)
+    assert scan.threats_found == 0
+    assert updated is not None
+    assert updated.status == CaseStatus.DISMISSED
+    assert "Reclasificado como punto legítimo" in updated.summary
 
 
 def test_public_scan_creates_watchlist_case_for_high_risk_ambiguous_point():

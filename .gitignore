@@ -23,3 +23,6 @@ service-account*.json
 *storage-state*.json
 *storage_state*.json
 .codex-log/
+.terraform/
+*.tfstate
+*.tfstate.*

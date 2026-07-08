@@ -6891,6 +6891,10 @@ button:hover {
   cursor: pointer;
 }
 
+.command-alert-row[hidden] {
+  display: none;
+}
+
 .command-alert-row::before {
   content: "";
   position: absolute;
@@ -7132,6 +7136,10 @@ button:hover {
   cursor: pointer;
 }
 
+.command-map-marker[hidden] {
+  display: none;
+}
+
 .command-map-marker span {
   width: 9px;
   height: 9px;
@@ -7148,31 +7156,6 @@ button:hover {
 .command-map-marker.is-selected {
   transform: scale(1.25);
   box-shadow: 0 0 0 5px rgba(201, 45, 57, 0.13), 0 5px 14px rgba(18, 27, 43, 0.22);
-}
-
-.command-map-marker--1 {
-  top: 22%;
-  left: 48%;
-}
-
-.command-map-marker--2 {
-  top: 43%;
-  left: 39%;
-}
-
-.command-map-marker--3 {
-  top: 54%;
-  left: 58%;
-}
-
-.command-map-marker--4 {
-  top: 68%;
-  left: 47%;
-}
-
-.command-map-marker--5 {
-  top: 77%;
-  left: 61%;
 }
 
 .command-map-legend {
@@ -9693,6 +9676,17 @@ button:hover {
   border-color: rgba(245, 158, 11, 0.3);
 }
 
+.case-muted-note {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.82);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .browser-submit-form {
   margin-top: 1rem;
 }
@@ -10161,6 +10155,20 @@ body {
 
 .brand-mark img {
   filter: none;
+}
+
+.sidebar .brand-mark {
+  width: min(168px, 100%);
+  height: 48px;
+  place-items: center start;
+}
+
+.sidebar .brand-mark img {
+  width: 100%;
+  height: auto;
+  max-height: 48px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .brand-name,

@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.models import EvidenceArtifact, MonitoringMode, Organization, OrganizationType, SourceType, ThreatCase
+from app.models import EvidenceArtifact, MonitoringMode, Organization, OrganizationType, RiskBucket, SourceType, ThreatCase
 from app.agents.forensic import ForensicAgent
 from app.agents.reporter import ReporterAgent
 from app.agents.scout import ScoutAgent
@@ -11,6 +12,7 @@ from app.services.auth import AuthService
 from app.services.dashboard import DashboardService
 import app.services.dashboard as dashboard_module
 from app.services.demo_data import suspicious_assets, suspicious_places
+from app.services.organization_resolution import resolve_case_organization_id
 from app.store import InMemoryRepository, repository as app_repository
 
 
@@ -50,6 +52,7 @@ def test_dashboard_sections_have_expected_shape():
     assert sections["threats"]["cards"][0]["dealer_maps_link"].startswith("https://www.google.com/maps")
     assert sections["threats"]["cards"][0]["identified_at"].endswith("COT")
     assert sections["threats"]["cards"][0]["observed_name"]
+    assert len(sections["threats"]["active_cards"]) == int(sections["executive"]["highlights"][0]["value"])
     assert len(sections["threats"]["filters"]["cities"]) >= 1
 
 
@@ -60,10 +63,114 @@ def test_command_alerts_are_sorted_by_risk():
     scout.run_public_scan("yamaha medellin", suspicious_places())
     scout.process_gbp_event(suspicious_assets()[0])
 
-    cards = DashboardService(repo).threat_summary()["cards"]
+    cards = DashboardService(repo).threat_summary()["active_cards"]
     scores = [card["case"].risk_score for card in cards]
 
     assert scores == sorted(scores, reverse=True)
+
+
+def test_command_alerts_include_watchlist_cases_in_primary_feed():
+    repo = InMemoryRepository()
+    repo.seed()
+    primary_case = ThreatCase(
+        id="case-primary-active",
+        title="Foto sospechosa en Motoblu Bello",
+        dealer_id="dealer-bello",
+        organization_id="org-dealer-bello",
+        dealer_name="Motoblu Bello",
+        city="Bello",
+        monitoring_mode=MonitoringMode.GBP_PUSH,
+        source_type=SourceType.OFFICIAL_PROFILE_UPDATE,
+        risk_score=90,
+        risk_reasons=["Teléfono observado distinto al oficial."],
+        summary="Debe aparecer en el feed principal.",
+        location_label="Bello",
+        source_reference_id="asset-primary-active",
+    )
+    watchlist_case = ThreatCase(
+        id="case-watchlist-active",
+        title="Watchlist de alto riesgo de Yamaha Copacabana",
+        dealer_id="dealer-itagui",
+        organization_id="org-dealer-itagui",
+        dealer_name="Yamaha Copacabana",
+        city="Copacabana",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_bucket=RiskBucket.HIGH_RISK_WATCHLIST,
+        risk_score=90,
+        risk_reasons=["Punto cercano con teléfono distinto."],
+        summary="También debe aparecer en el feed principal.",
+        location_label="Copacabana",
+        source_reference_id="place-watchlist-active",
+    )
+    repo.save_case(primary_case)
+    repo.save_case(watchlist_case)
+
+    summary = DashboardService(repo).threat_summary()
+
+    assert {card["case"].id for card in summary["active_cards"]} == {"case-primary-active", "case-watchlist-active"}
+    assert len(summary["cards"]) == 1
+    assert len(summary["watchlist_cards"]) == 1
+    assert summary["filters"]["cities"] == ["Bello", "Copacabana"]
+
+
+def test_legacy_motoblu_itagui_case_resolves_to_motoblu_organization():
+    repo = InMemoryRepository()
+    repo.seed()
+    repo.save_organization(Organization(id="org-motoblu", name="Motoblu", organization_type=OrganizationType.DEALER))
+    canonical = repo.dealers["dealer-itagui"].model_copy(update={"organization_id": "org-motoblu"})
+    repo._dealers[canonical.id] = canonical
+    legacy_case = ThreatCase(
+        id="case-legacy-itagui",
+        title="Posible clon de Motoblu Itagüí",
+        dealer_id="dealer-motoblu-itag",
+        organization_id=None,
+        dealer_name="Motoblu Itagüí",
+        city="Itagüí",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_score=100,
+        risk_reasons=["Dealer legacy sin organization_id."],
+        summary="Debe pertenecer a Motoblu.",
+        location_label="Itagüí",
+        source_reference_id="legacy-itagui",
+    )
+
+    assert resolve_case_organization_id(legacy_case, repo.dealers) == "org-motoblu"
+
+
+def test_motoblu_view_includes_legacy_itagui_cases_without_org_id():
+    repo = InMemoryRepository()
+    repo.seed()
+    repo.save_organization(Organization(id="org-motoblu", name="Motoblu", organization_type=OrganizationType.DEALER))
+    canonical = repo.dealers["dealer-itagui"].model_copy(update={"organization_id": "org-motoblu"})
+    repo._dealers[canonical.id] = canonical
+    user = repo.find_user_by_email("bello@motoblu.local")
+    assert user is not None
+    repo.save_membership(
+        repo.memberships["membership-bello-admin"].model_copy(update={"organization_id": "org-motoblu"})
+    )
+    legacy_case = ThreatCase(
+        id="case-legacy-itagui-visible",
+        title="Posible clon de Motoblu Itagüí",
+        dealer_id="dealer-motoblu-itag",
+        organization_id=None,
+        dealer_name="Motoblu Itagüí",
+        city="Itagüí",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_score=100,
+        risk_reasons=["Dealer legacy sin organization_id."],
+        summary="Debe aparecer en la vista Motoblu.",
+        location_label="Itagüí",
+        source_reference_id="legacy-itagui-visible",
+    )
+    repo.save_case(legacy_case)
+    actor = AuthService(repo)._actor_for_user(user.id, active_organization_id="org-motoblu")
+
+    cards = DashboardService(repo, actor).threat_summary()["cards"]
+
+    assert any(card["case"].id == "case-legacy-itagui-visible" for card in cards)
 
 
 def test_public_scan_endpoint_accepts_trusted_cloud_scheduler_headers():
@@ -160,6 +267,7 @@ def test_place_clone_case_detail_builds_comparison_panel():
                 "latitude": 6.3371,
                 "longitude": -75.5549,
                 "place_id": "clone-bello-ui",
+                "google_maps_uri": "https://www.google.com/maps/@6.3371,-75.5549,17z",
                 "source_query": "yamaha principal bello",
                 "query_hits": ["yamaha bello", "yamaha principal bello"],
                 "rating": 4.1,
@@ -175,8 +283,192 @@ def test_place_clone_case_detail_builds_comparison_panel():
     assert detail["clone_comparison"]["clone_name"]
     assert detail["clone_comparison"]["official_name"] == clone_case.dealer_name
     assert detail["clone_comparison"]["clone_maps_link"].startswith("https://www.google.com/maps")
-    assert "place/?q=place_id:clone-bello-ui" in detail["clone_comparison"]["clone_maps_link"]
-    assert "place/?q=place_id:place-official-bello" in detail["clone_comparison"]["official_maps_link"]
+    assert "query_place_id=clone-bello-ui" in detail["clone_comparison"]["clone_maps_link"]
+    assert "query_place_id=place-official-bello" in detail["clone_comparison"]["official_maps_link"]
+
+
+def test_maps_link_prefers_place_identity_over_generic_map_view():
+    link = DashboardService._maps_link(
+        {
+            "name": "Yamaha Bello Principal",
+            "address": "Diagonal 50 45-12, Bello",
+            "place_id": "clone-place-123",
+            "google_maps_uri": "https://www.google.com/maps/@6.3371,-75.5549,17z",
+        }
+    )
+
+    assert link == (
+        "https://www.google.com/maps/search/?api=1&query=Yamaha%20Bello%20Principal%20"
+        "Diagonal%2050%2045-12%2C%20Bello&query_place_id=clone-place-123"
+    )
+
+
+def test_maps_link_prefers_original_google_cid_for_observed_place_evidence():
+    link = DashboardService._maps_link(
+        {
+            "raw_payload": {
+                "googleMapsUri": "https://maps.google.com/?cid=5737355300905269745",
+                "id": "ChIJ6yqsYgApRI4R8bmplD8un08",
+            },
+            "name": "Yamaha Principal Medellín",
+            "address": "Cra. 48 #055422, Cl. 32B Sur #29, Envigado",
+            "place_id": "ChIJ6yqsYgApRI4R8bmplD8un08",
+        }
+    )
+
+    assert link == "https://maps.google.com/?cid=5737355300905269745"
+
+
+def test_maps_link_prefers_original_google_maps_uri_over_coordinates():
+    link = DashboardService._maps_link(
+        {
+            "raw_payload": {
+                "googleMapsUri": (
+                    "https://maps.google.com/?cid=18018655134564547765"
+                    "&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+                ),
+                "id": "ChIJ6yqsYgApRI4R8bmplD8un08",
+                "location": {"latitude": 6.1886421, "longitude": -75.5933969},
+            },
+            "name": "Yamaha Principal Medellín",
+            "address": "Cra. 48 #055422, Cl. 32B Sur #29, Envigado",
+            "place_id": "ChIJ6yqsYgApRI4R8bmplD8un08",
+            "latitude": 6.1886421,
+            "longitude": -75.5933969,
+        }
+    )
+
+    assert link == (
+        "https://maps.google.com/?cid=18018655134564547765"
+        "&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+    )
+
+
+def test_maps_link_uses_original_google_cid_for_real_clone_cases():
+    for content, expected_place_id in [
+        (
+            {
+                "raw_payload": {
+                    "googleMapsUri": (
+                        "https://maps.google.com/?cid=18018655134564547765"
+                        "&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+                    ),
+                    "id": "ChIJWXqU60uDRo4Rtfz8wWAfD_o",
+                    "location": {"latitude": 6.1896448, "longitude": -75.5933093},
+                },
+                "place_id": "ChIJWXqU60uDRo4Rtfz8wWAfD_o",
+                "name": "YamahaPrincipal Medellin",
+                "address": "Dirección cercana: Restaurante Pilimao´s, Cra. 52 #80 105 piso 3, Itagüí",
+                "latitude": 6.1896448,
+                "longitude": -75.5933093,
+            },
+            "ChIJWXqU60uDRo4Rtfz8wWAfD_o",
+        ),
+        (
+            {
+                "raw_payload": {
+                    "googleMapsUri": (
+                        "https://maps.google.com/?cid=1770883537504059527"
+                        "&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA"
+                    ),
+                    "id": "ChIJV61Z-IIpRI4Rh0CE3zFxkxg",
+                    "location": {"latitude": 6.2396842999999995, "longitude": -75.5834102},
+                },
+                "place_id": "ChIJV61Z-IIpRI4Rh0CE3zFxkxg",
+                "name": "Yamaha Sports Principal",
+                "address": "Cerca de Tecnishop - Motos Usadas, Av. 33 #65-30, Medellín",
+                "latitude": 6.2396842999999995,
+                "longitude": -75.5834102,
+            },
+            "ChIJV61Z-IIpRI4Rh0CE3zFxkxg",
+        ),
+    ]:
+        link = DashboardService._maps_link(content)
+
+        assert "cid=" in link
+        assert expected_place_id not in link
+
+
+def test_clone_comparison_exposes_observed_place_identity_and_scan_context():
+    repo = InMemoryRepository()
+    repo.seed()
+    clone_case = ThreatCase(
+        id="case-clone-identity-context",
+        title="Posible clon de Motoblu Bello",
+        dealer_id="dealer-bello",
+        organization_id="org-dealer-bello",
+        dealer_name="Motoblu Bello",
+        city="Bello",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_score=88,
+        risk_reasons=["Teléfono observado distinto al oficial."],
+        summary="Caso de prueba.",
+        location_label="Diagonal 50 45-12, Bello",
+        source_reference_id="clone-bello-identity",
+    )
+    repo.save_case(clone_case)
+    repo.save_evidence(
+        EvidenceArtifact(
+            id="evidence-clone-identity-context",
+            case_id=clone_case.id,
+            artifact_type="observed_place",
+            label="Yamaha Bello Principal",
+            content={
+                "name": "Yamaha Bello Principal",
+                "address": "Diagonal 50 45-12, Bello",
+                "phone_number": "3019998888",
+                "category": "store",
+                "latitude": 6.3371,
+                "longitude": -75.5549,
+                "place_id": "clone-bello-identity",
+                "observed_at": "2026-04-01T22:00:29.226447Z",
+                "source_query": "yamaha bello",
+                "raw_payload": {
+                    "googleMapsUri": "https://maps.google.com/?cid=123456789",
+                    "nationalPhoneNumber": "3019998888",
+                },
+            },
+        )
+    )
+
+    detail = DashboardService(repo).case_detail(clone_case.id)
+
+    comparison = detail["clone_comparison"]
+    assert comparison["clone_maps_link"] == "https://maps.google.com/?cid=123456789"
+    assert comparison["clone_place_id"] == "clone-bello-identity"
+    assert comparison["clone_cid"] == "123456789"
+    assert comparison["clone_observed_at"] == "2026-04-01T22:00:29.226447Z"
+    assert "Google Maps puede fusionar" in comparison["clone_maps_notice"]
+
+
+def test_maps_link_returns_none_for_invalid_place_id_evidence():
+    link = DashboardService._maps_link(
+        {
+            "name": "YamahaPrincipal Medellin",
+            "address": "Dirección cercana: Restaurante Pilimao´s, Cra. 52 #80 105 piso 3, Itagüí",
+            "place_id": "ChIJWXqU60uDRo4Rtfz8wWAfD_o",
+            "maps_link_status": "invalid_place_id",
+            "latitude": 6.1896448,
+            "longitude": -75.5933093,
+        }
+    )
+
+    assert link is None
+
+
+def test_maps_link_recovers_query_place_id_from_google_maps_url():
+    link = DashboardService._maps_link(
+        {
+            "name": "Yamaha Sports Calle 33",
+            "google_maps_uri": (
+                "https://www.google.com/maps/search/?api=1&query=Yamaha%20Sports"
+                "&query_place_id=ChIJstable123"
+            ),
+        }
+    )
+
+    assert link == "https://www.google.com/maps/search/?api=1&query=Yamaha%20Sports&query_place_id=ChIJstable123"
 
 
 def test_review_photo_case_prioritizes_visual_evidence_over_google_report_draft():
@@ -249,7 +541,8 @@ def test_dealer_maps_link_uses_places_resolution_when_profile_is_missing(monkeyp
     service = DashboardService(repo)
     link = service._dealer_maps_link(dealer, prefer_resolution=True)
 
-    assert link == "https://www.google.com/maps/place/?q=place_id:ChIJtest123"
+    assert "query_place_id=ChIJtest123" in link
+    assert "Mundo%20Yamaha%20Guayabal" in link
 
 
 def test_case_detail_page_renders():
@@ -318,9 +611,56 @@ def test_place_clone_case_detail_opens_timeline_and_related_by_default():
     response = client.get(f"/cases/{clone_case.id}")
 
     assert response.status_code == 200
+    assert (
+        'href="https://www.google.com/maps/search/?api=1&amp;query=Yamaha%20Bello%20Principal%20'
+        'Diagonal%2050%2045-12%2C%20Bello&amp;query_place_id=clone-bello-open-sections" '
+        'target="_blank" rel="noopener noreferrer"'
+    ) in response.text
     assert '<summary>Ver línea de tiempo del caso</summary>' in response.text
     assert '<details class="follow-up-details" open>' in response.text
     assert "Ver otros casos de esta sede" in response.text
+
+
+def test_place_clone_case_detail_warns_when_clone_place_id_is_invalid():
+    repo = InMemoryRepository()
+    repo.seed()
+    clone_case = ThreatCase(
+        id="case-clone-invalid-place",
+        title="Posible clon de Motoblu Itagüí",
+        dealer_id="dealer-itagui",
+        organization_id="org-dealer-itagui",
+        dealer_name="Motoblu Itagui",
+        city="Itagui",
+        monitoring_mode=MonitoringMode.PUBLIC_SCAN,
+        source_type=SourceType.PLACE_CLONE,
+        risk_score=100,
+        risk_reasons=["El punto ya no está disponible en Google Maps."],
+        summary="Evidencia histórica de un punto que Google ya no devuelve.",
+        location_label="Itagui",
+        source_reference_id="ChIJinvalid",
+    )
+    repo.save_case(clone_case)
+    repo.save_evidence(
+        EvidenceArtifact(
+            id="evidence-clone-invalid-place",
+            case_id=clone_case.id,
+            artifact_type="observed_place",
+            label="YamahaPrincipal Medellin",
+            content={
+                "name": "YamahaPrincipal Medellin",
+                "address": "Dirección cercana: Restaurante Pilimao´s, Cra. 52 #80 105 piso 3, Itagüí",
+                "place_id": "ChIJinvalid",
+                "maps_link_status": "invalid_place_id",
+                "latitude": 6.1896448,
+                "longitude": -75.5933093,
+            },
+        )
+    )
+
+    detail = DashboardService(repo).case_detail(clone_case.id)
+
+    assert detail["clone_comparison"]["clone_maps_link"] is None
+    assert "Google ya no devuelve una ficha pública" in detail["clone_comparison"]["clone_maps_issue"]
 
 
 def test_archived_case_keeps_dismissed_status_suggestion_and_shows_in_archived_cards():
@@ -358,6 +698,7 @@ def test_dashboard_page_renders_territory_story():
         response = client.get("/")
 
     assert response.status_code == 200
+    assert '/static/styles.css?v=' in response.text
     assert "Territorio" in response.text
     assert "Valle de Aburrá" in response.text
     assert "Abrir expediente" in response.text
@@ -372,6 +713,26 @@ def test_dashboard_page_renders_territory_story():
     assert "const commandPageSize = 6;" in response.text
     assert "Contrastar con sedes oficiales" in response.text
     assert "Punto en foco" in response.text
+
+
+def test_paginated_command_alerts_respect_hidden_attribute():
+    styles = (Path(__file__).parents[1] / "app" / "static" / "styles.css").read_text()
+    template = (Path(__file__).parents[1] / "app" / "templates" / "dashboard.html").read_text()
+
+    assert ".command-alert-row[hidden]" in styles
+    assert "display: none;" in styles.split(".command-alert-row[hidden]", 1)[1].split("}", 1)[0]
+    assert ".command-map-marker[hidden]" in styles
+    assert "marker.hidden = visibleIndex === -1;" in template
+    assert "positionCommandMarker(marker, row, visibleIndex);" in template
+
+
+def test_command_city_filter_is_accent_insensitive():
+    template = (Path(__file__).parents[1] / "app" / "templates" / "dashboard.html").read_text()
+
+    assert "normalizeFilterValue" in template
+    assert "matchesCityFilter(row.dataset.city, city)" in template
+    assert "setSelectValueFromParam(citySelect, params.get(\"city\"))" in template
+    assert "row.dataset.city === city" not in template
 
 
 def test_api_me_and_dealer_scope():

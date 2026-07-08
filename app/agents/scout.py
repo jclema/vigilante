@@ -40,10 +40,13 @@ class ScoutAgent:
         contextual_observations = 0
         for place in self._consolidate_places(observed_places):
             dealers = list(self.repository.dealers.values())
+            existing = self.repository.find_case_by_reference(place.place_id)
             official_matches = [
                 dealer for dealer in dealers if self.forensic.looks_like_official_place(dealer, place)
             ]
             if official_matches:
+                if existing:
+                    self._dismiss_stale_place_case(existing, "Reclasificado como punto oficial autorizado.")
                 continue
 
             ranked = sorted(
@@ -55,6 +58,8 @@ class ScoutAgent:
                 reverse=True,
             )
             if not ranked or ranked[0][0] < 35:
+                if existing:
+                    self._dismiss_stale_place_case(existing, "Reclasificado como punto sin relevancia suficiente para alerta.")
                 continue
 
             _, dealer = ranked[0]
@@ -62,12 +67,15 @@ class ScoutAgent:
             score, reasons = assessment.score, assessment.reasons
             if assessment.classification == "non_official_legit":
                 contextual_observations += 1
+                if existing:
+                    self._dismiss_stale_place_case(existing, "Reclasificado como punto legítimo en el re-scan.")
                 continue
             if not assessment.should_open_case:
+                if existing:
+                    self._dismiss_stale_place_case(existing, "Reclasificado sin evidencia suficiente para mantener alerta.")
                 continue
 
             threats += 1
-            existing = self.repository.find_case_by_reference(place.place_id)
             if existing:
                 existing.risk_score = max(existing.risk_score, score)
                 existing.risk_reasons = sorted(set(existing.risk_reasons + reasons))
@@ -141,6 +149,14 @@ class ScoutAgent:
         )
         self.repository.save_job(job)
         return scan
+
+    def _dismiss_stale_place_case(self, case: ThreatCase, reason: str) -> None:
+        if case.source_type != SourceType.PLACE_CLONE or case.status == CaseStatus.DISMISSED:
+            return
+        case.status = CaseStatus.DISMISSED
+        case.summary = f"{reason} Se conserva en histórico como falso positivo o alerta superada."
+        case.risk_reasons = sorted(set(case.risk_reasons + [reason]))
+        self.repository.save_case(case)
 
     def process_gbp_event(self, asset: ObservedAsset) -> ThreatCase | None:
         profile = self.repository.profiles.get(asset.profile_id)

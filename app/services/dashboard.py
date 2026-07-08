@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from zoneinfo import ZoneInfo
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote, urlparse
 
 from app.models import CaseStatus, JobStatus, MonitoringMode, RiskBucket, SourceType
 from app.services.access import ScopedRepositoryView
@@ -299,9 +299,15 @@ class DashboardService:
         )
         cards = [self._threat_card(case) for case in primary_cases]
         watchlist_cards = [self._threat_card(case) for case in watchlist_cases]
+        active_cards = sorted(
+            [*cards, *watchlist_cards],
+            key=lambda card: (card["case"].risk_score, card["case"].updated_at),
+            reverse=True,
+        )
         return {
             "cases": cases,
             "cards": cards,
+            "active_cards": active_cards,
             "watchlist_cards": watchlist_cards,
             "archived_cards": [self._archived_case_card(case) for case in archived_cases[:6]],
             "archived_history": [self._archived_case_card(case) for case in archived_cases],
@@ -310,7 +316,7 @@ class DashboardService:
             "archived_count": len(archived_cases),
             "watchlist_count": len(watchlist_cards),
             "filters": {
-                "cities": sorted({card["city"] for card in cards}),
+                "cities": sorted({card["city"] for card in active_cards}),
                 "statuses": sorted({self._labelize_value(case.status.value) for case in cases}),
                 "priorities": ["Critico", "Alto", "Medio", "Bajo"],
             },
@@ -1094,13 +1100,17 @@ class DashboardService:
 
     @staticmethod
     def _place_maps_link(name: str | None = None, address: str | None = None, place_id: str | None = None, google_maps_uri: str | None = None):
-        if google_maps_uri:
-            return google_maps_uri
         if place_id:
-            return f"https://www.google.com/maps/place/?q=place_id:{quote(str(place_id))}"
+            return DashboardService._place_id_maps_link(name, address, str(place_id))
+        if google_maps_uri and DashboardService._is_precise_maps_link(str(google_maps_uri)):
+            return google_maps_uri
+        if google_maps_uri and not DashboardService._is_generic_maps_landing(str(google_maps_uri)):
+            return google_maps_uri
         query = " ".join(part for part in [str(name or ""), str(address or "")] if part).strip()
         if query:
             return f"https://www.google.com/maps/search/?api=1&query={quote(query)}"
+        if google_maps_uri:
+            return google_maps_uri
         return None
 
     def _resolve_dealer_place_link(self, dealer):
@@ -1148,27 +1158,95 @@ class DashboardService:
     def _maps_link(content: dict[str, object] | None):
         if not content:
             return None
+        if content.get("maps_link_status") == "invalid_place_id" or content.get("place_id_status") == "invalid":
+            return None
         raw_payload = content.get("raw_payload") if isinstance(content.get("raw_payload"), dict) else {}
-        google_maps_uri = content.get("google_maps_uri") or raw_payload.get("googleMapsUri")
-        if google_maps_uri:
-            return str(google_maps_uri)
-        place_id = content.get("place_id")
+        google_maps_uri = str(content.get("google_maps_uri") or raw_payload.get("googleMapsUri") or "")
+        place_id = content.get("place_id") or raw_payload.get("placeId")
+        if google_maps_uri and not place_id:
+            place_id = DashboardService._place_id_from_maps_link(google_maps_uri)
         name = content.get("name") or content.get("address") or "Ubicacion observada"
         address = content.get("address")
+        if google_maps_uri and DashboardService._is_precise_maps_link(google_maps_uri):
+            return google_maps_uri
+        if google_maps_uri and DashboardService._has_query_place_id(google_maps_uri):
+            return google_maps_uri
         if place_id:
             return DashboardService._place_maps_link(str(name), str(address or ""), str(place_id))
         google_maps_uri = content.get("source_page_url")
-        if google_maps_uri:
+        if google_maps_uri and DashboardService._is_precise_maps_link(str(google_maps_uri)):
+            return str(google_maps_uri)
+        if google_maps_uri and not DashboardService._is_generic_maps_landing(str(google_maps_uri)):
             return str(google_maps_uri)
         if name or address:
             query = " ".join(part for part in [str(name), str(address or "")] if part).strip()
             if query:
                 return f"https://www.google.com/maps/search/?api=1&query={quote(query)}"
-        latitude = content.get("latitude")
-        longitude = content.get("longitude")
-        if latitude is not None and longitude is not None:
-            return f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
+        return DashboardService._coordinate_maps_link(content, raw_payload)
+
+    @staticmethod
+    def _coordinate_maps_link(content: dict[str, object], raw_payload: dict[str, object] | None = None) -> str | None:
+        raw_payload = raw_payload or {}
+        location = raw_payload.get("location") if isinstance(raw_payload.get("location"), dict) else {}
+        latitude = content.get("latitude") or location.get("latitude")
+        longitude = content.get("longitude") or location.get("longitude")
+        if latitude is None or longitude is None:
+            return None
+        return f"https://www.google.com/maps/search/?api=1&query={quote(f'{latitude},{longitude}')}"
+
+    @staticmethod
+    def _place_id_maps_link(name: str | None, address: str | None, place_id: str) -> str:
+        query = " ".join(part for part in [str(name or ""), str(address or "")] if part).strip() or "Google Maps"
+        return f"https://www.google.com/maps/search/?api=1&query={quote(query)}&query_place_id={quote(place_id)}"
+
+    @staticmethod
+    def _place_id_from_maps_link(url: str) -> str | None:
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        query_place_id = query.get("query_place_id", [""])[0]
+        if query_place_id:
+            return query_place_id
+        for key in ("q",):
+            value = query.get(key, [""])[0]
+            if value.startswith("place_id:"):
+                return value.removeprefix("place_id:")
         return None
+
+    @staticmethod
+    def _cid_from_maps_link(url: str | None) -> str | None:
+        if not url:
+            return None
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        return query.get("cid", [""])[0] or None
+
+    @staticmethod
+    def _has_query_place_id(url: str) -> bool:
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        return bool(query.get("query_place_id", [""])[0] or query.get("q", [""])[0].startswith("place_id:"))
+
+    @staticmethod
+    def _is_precise_maps_link(url: str) -> bool:
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        if query.get("cid", [""])[0]:
+            return True
+        if query.get("query_place_id", [""])[0]:
+            return True
+        if query.get("q", [""])[0].startswith("place_id:"):
+            return True
+        return "/maps/place" in parsed.path
+
+    @staticmethod
+    def _is_generic_maps_landing(url: str) -> bool:
+        parsed = urlparse(url)
+        path = parsed.path
+        if "/maps/@" in path:
+            return True
+        if path.rstrip("/") in {"/maps", "/maps/search"} and "query_place_id=" not in parsed.query and "place_id:" not in parsed.query:
+            return True
+        return False
 
     def _clone_comparison(self, case, evidence, dealer):
         if case.source_type != SourceType.PLACE_CLONE:
@@ -1177,12 +1255,16 @@ class DashboardService:
         if not observed:
             return None
         content = observed.content or {}
+        raw_payload = content.get("raw_payload") if isinstance(content.get("raw_payload"), dict) else {}
+        google_maps_uri = str(content.get("google_maps_uri") or raw_payload.get("googleMapsUri") or "")
         official_name = dealer.name if dealer else case.dealer_name
         official_address = dealer.address if dealer else case.location_label
         official_phones = dealer.phone_numbers if dealer else []
         clone_name = content.get("name") or observed.label or "Punto sospechoso"
         clone_address = content.get("address") or "Sin dirección visible"
         clone_phone = content.get("phone_number") or "Sin teléfono visible"
+        clone_place_id = content.get("place_id") or raw_payload.get("id") or raw_payload.get("placeId")
+        clone_cid = self._cid_from_maps_link(google_maps_uri)
         query_hits = content.get("query_hits") or []
         source_query = content.get("source_query")
         distance_m = None
@@ -1202,6 +1284,16 @@ class DashboardService:
             "clone_rating": content.get("rating"),
             "clone_reviews": content.get("user_rating_count"),
             "clone_maps_link": self._maps_link(content),
+            "clone_maps_issue": self._maps_issue(content),
+            "clone_place_id": clone_place_id,
+            "clone_cid": clone_cid,
+            "clone_observed_at": content.get("observed_at") or observed.created_at.isoformat(),
+            "clone_maps_notice": (
+                "Google Maps puede fusionar o redirigir fichas históricas. "
+                "Contrasta el teléfono observado, Place ID/CID y fecha del scan."
+                if clone_place_id or clone_cid
+                else None
+            ),
             "official_name": official_name,
             "official_address": official_address,
             "official_phones": official_phones,
@@ -1211,6 +1303,14 @@ class DashboardService:
             "distance_m": distance_m,
             "reasons": reasons,
         }
+
+    @staticmethod
+    def _maps_issue(content: dict[str, object] | None) -> str | None:
+        if not content:
+            return None
+        if content.get("maps_link_status") == "invalid_place_id" or content.get("place_id_status") == "invalid":
+            return "Google ya no devuelve una ficha pública para este Place ID. El caso debe tratarse como evidencia histórica o resuelta."
+        return None
 
     @staticmethod
     def _distance_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> int:

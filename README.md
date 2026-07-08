@@ -1,5 +1,7 @@
 # Vigilante
 
+[English](README.en.md) | [Español](README.md)
+
 Vigilante es un piloto para detectar suplantacion de concesionarios Yamaha en Google Maps, consolidar evidencia y ayudar a un humano a decidir si un caso debe escalarse, archivarse o reportarse.
 
 No es un sistema autonomo de enforcement. Hoy es un producto de operaciones asistidas con foco en:
@@ -8,6 +10,36 @@ No es un sistema autonomo de enforcement. Hoy es un producto de operaciones asis
 - analisis de evidencia y construccion de expedientes
 - gestion operativa por red, concesionario y sede
 - preparacion de reportes con aprobacion humana
+
+## Produccion
+
+La aplicacion publica esta disponible en:
+
+- [https://www.watchmanhub.com](https://www.watchmanhub.com)
+
+La ruta publica de produccion es:
+
+```text
+Cloudflare
+  -> Google Cloud Global External Application Load Balancer
+  -> Cloud Armor
+  -> Serverless NEG
+  -> Cloud Run
+  -> Firestore y Cloud Storage
+```
+
+Controles activos:
+
+- TLS administrado para `watchmanhub.com` y `www.watchmanhub.com`
+- redireccion HTTP a HTTPS y dominio canonico en `www`
+- Cloud Run limitado a trafico interno y del Load Balancer
+- URL publica `run.app` bloqueada para acceso directo desde internet
+- Cloud Armor conectado con reglas administradas en preview
+- runtime y Cloud Scheduler con service accounts separadas
+- Scheduler autenticado con OIDC
+- secretos administrados con Secret Manager
+- cookies seguras y headers HTTP defensivos
+- datos demo desactivados en produccion
 
 ## Estado real del proyecto
 
@@ -168,7 +200,7 @@ Resultado:
 
 | Capacidad | Estado | Comentario |
 |---|---|---|
-| Login, roles y sesiones | Funcional | Demo y flujo Google conectados |
+| Login, roles y sesiones | Funcional | Google OAuth en produccion; demo solo local |
 | Dashboard operativo | Funcional | Vistas de plataforma, red y concesionario |
 | Territory map | Funcional | Enfoque operativo en alertas |
 | Gestion de casos | Funcional | Triage, expediente, timeline y operacion |
@@ -178,6 +210,10 @@ Resultado:
 | Browser enforcement guiado | Funcional con limites | Humano-in-the-loop |
 | Ingesta formal GBP en codigo | Funcional en software | Bloqueada externamente por Google |
 | Captura publica de fotos con Playwright | Experimental | No confiable en Cloud Run |
+
+La autenticacion publica usa `https://www.watchmanhub.com/auth/google/callback`.
+Las cuentas demo solo pertenecen al entorno local y sus credenciales conocidas
+son rechazadas en produccion.
 
 ## Lo que no funciona hoy
 
@@ -230,15 +266,17 @@ Hace falta dataset y rutina operativa para medir:
 - tiempo a decision
 - valor real por concesionario
 
-### P1. Persistencia y operacion productiva
+### P1. Operacion productiva
 
-Aunque ya existe soporte para Firestore y GCS, falta endurecer:
+Firestore, Cloud Storage, Secret Manager, Load Balancer e identidades separadas
+ya estan operativos. Falta completar:
 
 - retencion de evidencia
-- observabilidad
+- alertas y dashboards de observabilidad
 - auditoria
 - runbooks
 - recuperacion ante fallos externos
+- calibracion y enforcement final de Cloud Armor
 
 ## Plan actual recomendado
 
@@ -270,6 +308,8 @@ Si el negocio necesita validar fotos antes de esa aprobacion, conviene definir u
 ## Credenciales demo
 
 Las cuentas demo base viven en `app/services/demo_data.py`.
+Solo se cargan localmente cuando `SEED_DEMO_DATA=true`. Produccion exige
+`SEED_DEMO_DATA=false` y rechaza configuraciones inseguras durante el arranque.
 
 - `operator@vigilante.local` / `change-me`
 - `yamaha@vigilante.local` / `yamaha-demo`
@@ -356,10 +396,34 @@ Nunca guardar credenciales, service accounts, evidencia real ni `storage_state` 
 ## Documentacion clave
 
 - [`AGENTS.md`](AGENTS.md): mapa rapido del repo para agentes.
+- [`openspec/specs`](openspec/specs): specs vivos del producto y comportamiento esperado.
+- [`openspec/changes`](openspec/changes): cambios Spec-Driven Development activos y archivados.
+- [`ai-specs/docs/base-standards.md`](ai-specs/docs/base-standards.md): reglas portables para agentes.
+- [`ai-specs/docs/product-context.md`](ai-specs/docs/product-context.md): contexto de producto, usuarios y oportunidad.
+- [`docs/onboarding/developer-onboarding.md`](docs/onboarding/developer-onboarding.md): onboarding en ingles para developers externos.
 - [`docs/google-cloud-pilot.md`](docs/google-cloud-pilot.md): checklist de despliegue del piloto.
+- [`docs/watchmanhub-production-runbook.md`](docs/watchmanhub-production-runbook.md): operacion, diagnostico y rollback de produccion.
 - [`docs/gbp-access-matrix-guide.md`](docs/gbp-access-matrix-guide.md): levantamiento de acceso GBP.
 - [`docs/experimental-browser-capture.md`](docs/experimental-browser-capture.md): limites y uso del scraper experimental.
 - [`Agente IA Anti-Phishing Google Maps.md`](Agente%20IA%20Anti-Phishing%20Google%20Maps.md): investigacion y propuesta original.
+
+## Spec-Driven Development
+
+Vigilante usa OpenSpec como capa viva de especificaciones. Para cambios no
+triviales de producto, comportamiento, integraciones, seguridad, operaciones o
+arquitectura:
+
+```bash
+/opsx:explore
+/opsx:propose <change-name>
+/opsx:apply <change-name>
+npx --yes @fission-ai/openspec@latest validate --all --no-interactive
+/opsx:archive <change-name>
+```
+
+La regla practica: si el cambio afecta casos, evidencia, scoring, permisos,
+reportes, GBP, Places, operaciones productivas o experiencia principal, primero
+debe quedar expresado como spec con criterios de aceptacion y escenarios.
 
 ## Regla de entrega
 

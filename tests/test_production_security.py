@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 import pytest
 
-from app.config import Settings
-from app.main import app
+from app.config import Settings, settings
+from app.main import app, login_attempts
 
 
 def test_production_settings_reject_insecure_defaults():
@@ -60,3 +60,63 @@ def test_health_endpoints_are_public_and_distinct():
 
     assert health.json() == {"status": "ok"}
     assert readiness.json() == {"status": "ready", "storage_backend": "memory"}
+
+
+def test_production_rejects_cross_site_form_posts():
+    original_env = settings.app_env
+    settings.app_env = "production"
+    try:
+        client = TestClient(app, base_url="https://testserver")
+        response = client.post(
+            "/auth/login",
+            data={"email": "operator@example.com", "password": "invalid"},
+            headers={"Origin": "https://attacker.example"},
+        )
+    finally:
+        settings.app_env = original_env
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Invalid request origin"}
+
+
+def test_production_accepts_same_origin_form_posts():
+    original_env = settings.app_env
+    settings.app_env = "production"
+    try:
+        client = TestClient(app, base_url="https://testserver")
+        response = client.post(
+            "/auth/login",
+            data={"email": "operator@example.com", "password": "invalid"},
+            headers={"Origin": "https://testserver"},
+        )
+    finally:
+        settings.app_env = original_env
+
+    assert response.status_code == 400
+
+
+def test_production_throttles_repeated_failed_logins():
+    original_env = settings.app_env
+    settings.app_env = "production"
+    login_attempts.clear()
+    try:
+        client = TestClient(app, base_url="https://testserver")
+        for _ in range(settings.login_rate_limit_attempts):
+            response = client.post(
+                "/auth/login",
+                data={"email": "rate-limit@example.com", "password": "invalid"},
+                headers={"Origin": "https://testserver"},
+            )
+            assert response.status_code == 400
+
+        blocked = client.post(
+            "/auth/login",
+            data={"email": "rate-limit@example.com", "password": "invalid"},
+            headers={"Origin": "https://testserver"},
+        )
+    finally:
+        login_attempts.clear()
+        settings.app_env = original_env
+
+    assert blocked.status_code == 429
+    assert blocked.headers["retry-after"] == str(settings.login_rate_limit_window_seconds)

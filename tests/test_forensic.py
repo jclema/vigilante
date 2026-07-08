@@ -7,7 +7,7 @@ from app.agents.forensic import (
     normalize_name,
     normalize_phone,
 )
-from app.models import ObservedAsset, ObservedPlace, SourceType
+from app.models import AuthorizedDealer, ObservedAsset, ObservedPlace, SourceType
 from app.services.demo_data import demo_dealers
 
 
@@ -75,6 +75,90 @@ def test_official_match_detects_real_dealer():
     assert forensic.looks_like_official_place(dealer, place) is True
     score, _ = forensic.score_place(dealer, place)
     assert score < 40
+
+
+def test_official_match_accepts_incolmotos_yamaha_alias_at_exact_official_site():
+    dealer = AuthorizedDealer(
+        id="dealer-incolmotos-pdv-centro",
+        organization_id="org-incolmotos",
+        name="Incolmotos Yamaha",
+        city="Medellin",
+        address="CL 37 # 45-65",
+        phone_numbers=["6042321316", "6042326006", "3104424205"],
+        latitude=6.2372118,
+        longitude=-75.5709811,
+    )
+    place = ObservedPlace(
+        id="p-incolmotos-official",
+        place_id="ChIJuW-GbQApRI4RgonrTqEC5Os",
+        name="YAMAHA PRINCIPAL SAN DIEGO LA CANDELARIA",
+        address="Cl. 37 #45-65, La Candelaria, Medellin, Antioquia, Colombia",
+        phone_number="300 1154464",
+        category="store",
+        latitude=6.2372118,
+        longitude=-75.5709811,
+        source_query="yamaha principal medellin",
+        query_rank=2,
+    )
+    assessment = ForensicAgent().classify_place(dealer, place)
+    assert assessment.classification == "official_match"
+    assert assessment.should_open_case is False
+
+
+def test_official_match_accepts_san_juan_address_abbreviation_from_official_source():
+    dealer = AuthorizedDealer(
+        id="dealer-mundo-yamaha-san-juan",
+        organization_id="org-dealer-guayabal",
+        name="Mundo Yamaha San Juan",
+        city="Medellin",
+        address="CRA 73 44 10",
+        phone_numbers=["6044443132", "6044128488"],
+        latitude=6.249831,
+        longitude=-75.592213,
+    )
+    place = ObservedPlace(
+        id="p-san-juan-official",
+        place_id="ChIJqYLPQwApRI4RGk0vK9kqs8Q",
+        name="Yamaha principal San Juan Medellin",
+        address="Cra. 73 #44-10, Laureles - Estadio, Medellin, Antioquia, Colombia",
+        phone_number="315 3767434",
+        category="store",
+        latitude=6.249737,
+        longitude=-75.592145,
+        source_query="yamaha principal medellin",
+        query_rank=1,
+    )
+    assessment = ForensicAgent().classify_place(dealer, place)
+    assert assessment.classification == "official_match"
+    assert assessment.should_open_case is False
+
+
+def test_official_match_accepts_yamaha_sports_av_33_same_official_address():
+    dealer = AuthorizedDealer(
+        id="dealer-yamaha-sports-calle-33",
+        organization_id="org-yamaha-sports",
+        name="Yamaha Sports",
+        city="Medellin",
+        address="CL 33 65 50",
+        phone_numbers=["6043513667", "6043513666"],
+        latitude=6.239376,
+        longitude=-75.583563,
+    )
+    place = ObservedPlace(
+        id="p-yamaha-sports-official",
+        place_id="ChIJV2SeMQApRI4R1-_mAZJ2WHY",
+        name="Yamaha sport av 33 medellin",
+        address="Av. 33 #65-50, Laureles - Estadio, Medellin, Antioquia, Colombia",
+        phone_number="301 9588501",
+        category="store",
+        latitude=6.2396245,
+        longitude=-75.583594,
+        source_query="yamaha medellin",
+        query_rank=1,
+    )
+    assessment = ForensicAgent().classify_place(dealer, place)
+    assert assessment.classification == "official_match"
+    assert assessment.should_open_case is False
 
 
 def test_score_place_works_without_coordinates():
