@@ -91,6 +91,7 @@ Never:
 - `openspec/specs/`: living product and behavior specs.
 - `ai-specs/docs/base-standards.md`: portable SDD rules for agents.
 - `ai-specs/docs/product-context.md`: product strategy and operating context.
+- `docs/agile-governance.md`: risk-based workflow for moving fast with guardrails.
 - `docs/google-cloud-pilot.md`: deployment checklist.
 - `docs/experimental-browser-capture.md`: experimental capture limitations.
 - `docs/gbp-access-matrix-guide.md`: GBP onboarding data.
