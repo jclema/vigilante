@@ -16,6 +16,11 @@ from app.services.geocoding import GeocodingService
 
 
 OFFICIAL_YAMAHA_DISTRIBUTORS_URL = "https://www.incolmotos-yamaha.com.co/wp-json/v2/distributors/"
+DEFAULT_FIXED_PHONE_AREA_CODE = "604"
+DEPARTMENT_FIXED_PHONE_AREA_CODES = {
+    "5": "604",
+    "11": "601",
+}
 
 
 def slugify(value: str) -> str:
@@ -39,10 +44,13 @@ def parse_influence(raw_value: str) -> tuple[str | None, float | None]:
     return label, radius
 
 
-def _extract_phone_numbers(raw_value: str) -> list[str]:
+def _extract_phone_numbers(raw_value: str, *, default_area_code: str = DEFAULT_FIXED_PHONE_AREA_CODE) -> list[str]:
     groups = re.findall(r"\d+", raw_value or "")
     compact_digits = "".join(groups)
-    if len(compact_digits) in {7, 10}:
+    if len(compact_digits) == 7:
+        normalized = normalize_phone(f"{default_area_code}{compact_digits}")
+        return [normalized] if normalized else []
+    if len(compact_digits) == 10:
         normalized = normalize_phone(compact_digits)
         return [normalized] if normalized else []
 
@@ -61,7 +69,7 @@ def _extract_phone_numbers(raw_value: str) -> list[str]:
                 last_area_code = normalized[:3]
             index += 1
         elif len(group) == 7:
-            normalized = normalize_phone(f"{last_area_code or '604'}{group}")
+            normalized = normalize_phone(f"{last_area_code or default_area_code}{group}")
             index += 1
         else:
             normalized = normalize_phone(group)
@@ -72,13 +80,18 @@ def _extract_phone_numbers(raw_value: str) -> list[str]:
     return numbers
 
 
-def parse_phone_candidates(fixed_phone: str, mobile_phone: str) -> list[str]:
+def parse_phone_candidates(
+    fixed_phone: str,
+    mobile_phone: str,
+    *,
+    default_area_code: str = DEFAULT_FIXED_PHONE_AREA_CODE,
+) -> list[str]:
     numbers: list[str] = []
     for value in [fixed_phone, mobile_phone]:
         cleaned = compact_spaces(value)
         if not cleaned or cleaned.upper() == "N/A":
             continue
-        for normalized in _extract_phone_numbers(cleaned):
+        for normalized in _extract_phone_numbers(cleaned, default_area_code=default_area_code):
             if normalized not in numbers:
                 numbers.append(normalized)
     return numbers
@@ -110,16 +123,21 @@ def official_yamaha_dealers_from_distributors(
     *,
     department_id: str = "5",
     city: str = "Medellín",
+    city_aliases: list[str] | tuple[str, ...] | None = None,
+    default_area_code: str | None = None,
     organization_id: str | None = "org-yamaha-network",
 ) -> list[AuthorizedDealer]:
     dealers: list[AuthorizedDealer] = []
-    normalized_city = compact_spaces(city).lower()
+    normalized_cities = {_normalize_city_name(city), *{_normalize_city_name(alias) for alias in city_aliases or []}}
+    phone_area_code = default_area_code or DEPARTMENT_FIXED_PHONE_AREA_CODES.get(
+        str(department_id), DEFAULT_FIXED_PHONE_AREA_CODE
+    )
     for row in rows:
         if str(row.get("tienda", "")).upper() != "SI":
             continue
         if str(row.get("id_departamento", "")) != department_id:
             continue
-        if compact_spaces(str(row.get("municipio", ""))).lower() != normalized_city:
+        if _normalize_city_name(str(row.get("municipio", ""))) not in normalized_cities:
             continue
 
         name = compact_spaces(str(row.get("nombre", "")))
@@ -136,7 +154,11 @@ def official_yamaha_dealers_from_distributors(
                 name=name,
                 city=city,
                 address=address,
-                phone_numbers=parse_phone_candidates(str(row.get("telefono", "")), str(row.get("whatsapp", ""))),
+                phone_numbers=parse_phone_candidates(
+                    str(row.get("telefono", "")),
+                    str(row.get("whatsapp", "")),
+                    default_area_code=phone_area_code,
+                ),
                 latitude=lat,
                 longitude=lng,
                 influence_label="Fuente oficial Incolmotos Yamaha",
@@ -155,7 +177,9 @@ def merge_official_yamaha_dealers(
     matched_existing_ids: set[str] = set()
 
     for official in official_dealers:
-        existing = _find_existing_official_match(existing_dealers, official, matched_existing_ids, max_merge_distance_km)
+        existing = _find_existing_official_match(
+            existing_dealers, official, matched_existing_ids, max_merge_distance_km
+        )
         if existing is None:
             merged_by_id[official.id] = official
             continue
@@ -211,6 +235,10 @@ def _safe_float(value: Any) -> float | None:
         return float(str(value).strip().strip(","))
     except (TypeError, ValueError):
         return None
+
+
+def _normalize_city_name(value: str) -> str:
+    return re.sub(r"[.\s]+", " ", compact_spaces(value).lower()).strip()
 
 
 @dataclass

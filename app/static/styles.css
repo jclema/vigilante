@@ -1544,6 +1544,11 @@ h3,
   top: 39%;
 }
 
+.territory-city-label--bogota {
+  left: 64%;
+  top: 24%;
+}
+
 .territory-city-label--itagui {
   left: 50%;
   top: 58%;
@@ -7109,6 +7114,11 @@ button:hover {
   font-size: 1.35rem;
   font-weight: 600;
   text-transform: none;
+}
+
+.command-map-city--bogota {
+  top: 28%;
+  left: 66%;
 }
 
 .command-map-city--itagui {

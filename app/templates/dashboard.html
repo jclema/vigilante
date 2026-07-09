@@ -170,7 +170,7 @@
           <div class="command-panel-head command-map-head">
             <div>
               <h2>Territorio</h2>
-              <p>Medellín y Valle de Aburrá</p>
+              <p>Red Yamaha Colombia</p>
             </div>
             <div class="command-map-mode"><span data-command-map-mode>Solo alertas</span></div>
           </div>
@@ -178,6 +178,7 @@
             <img src="/static/medellin-atlas-login.webp" alt="" aria-hidden="true" />
             <span class="command-map-city command-map-city--bello">Bello</span>
             <span class="command-map-city command-map-city--medellin">Medellín</span>
+            <span class="command-map-city command-map-city--bogota">Bogotá D.C.</span>
             <span class="command-map-city command-map-city--itagui">Itagüí</span>
             <span class="command-map-city command-map-city--envigado">Envigado</span>
             {% for card in sections.threats.cards %}
@@ -320,7 +321,7 @@
             <article class="territory-map territory-map--primary territory-map--interactive">
               <div class="territory-map-head territory-map-head--interactive">
                 <div>
-                  <div class="territory-map-label">Valle de Aburrá</div>
+                  <div class="territory-map-label">Red Yamaha Colombia</div>
                   <p>Selecciona un punto para ver contexto y abrir el expediente asociado.</p>
                 </div>
                 <div class="territory-map-summary">
@@ -362,6 +363,7 @@
                   {% endfor %}
                   <div class="territory-city-label territory-city-label--bello">Bello</div>
                   <div class="territory-city-label territory-city-label--medellin">Medellín</div>
+                  <div class="territory-city-label territory-city-label--bogota">Bogotá D.C.</div>
                   <div class="territory-city-label territory-city-label--itagui">Itagüí</div>
                   <div class="territory-city-label territory-city-label--envigado">Envigado</div>
                   <div class="territory-city-label territory-city-label--sabaneta">Sabaneta</div>
@@ -734,6 +736,10 @@
         Bello: [50, 18],
         Medellín: [51, 48],
         Medellin: [51, 48],
+        "Bogotá D.C.": [67, 32],
+        "Bogota D.C.": [67, 32],
+        Bogotá: [67, 32],
+        Bogota: [67, 32],
         Itagüí: [38, 74],
         Itagui: [38, 74],
         Envigado: [65, 72],

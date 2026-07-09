@@ -16,7 +16,11 @@ from app.store import get_repository
 def main() -> int:
     parser = argparse.ArgumentParser(description="Sincroniza whitelist desde la fuente oficial de Incolmotos Yamaha.")
     parser.add_argument("--city", default="Medellín", help="Ciudad oficial a importar")
+    parser.add_argument(
+        "--city-alias", action="append", default=[], help="Alias adicional de ciudad en la fuente oficial"
+    )
     parser.add_argument("--department-id", default="5", help="ID de departamento en la fuente oficial")
+    parser.add_argument("--default-area-code", default=None, help="Indicativo fijo para teléfonos de 7 dígitos")
     parser.add_argument("--dry-run", action="store_true", help="No escribe en el repositorio")
     parser.add_argument("--dump-json", action="store_true", help="Imprime dealers resultantes")
     args = parser.parse_args()
@@ -26,6 +30,8 @@ def main() -> int:
         rows,
         department_id=args.department_id,
         city=args.city,
+        city_aliases=args.city_alias,
+        default_area_code=args.default_area_code,
         organization_id="org-yamaha-network",
     )
 
@@ -40,7 +46,8 @@ def main() -> int:
     changed_dealers = [
         dealer
         for dealer in merged_dealers
-        if dealer.id in official_or_updated_ids or dealer.model_dump() != existing_by_id.get(dealer.id, dealer).model_dump()
+        if dealer.id in official_or_updated_ids
+        or dealer.model_dump() != existing_by_id.get(dealer.id, dealer).model_dump()
     ]
     new_profiles = [
         DealerProfile(

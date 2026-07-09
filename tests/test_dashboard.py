@@ -46,7 +46,7 @@ def test_dashboard_sections_have_expected_shape():
     assert "threats" in sections
     assert "trust" in sections
     assert sections["executive"]["highlights"][0]["label"] == "Amenazas activas"
-    assert sections["territory"]["headline"] == "Cómo se distribuye el riesgo en el Valle de Aburrá"
+    assert sections["territory"]["headline"] == "Cómo se distribuye el riesgo en la red Yamaha"
     assert len(sections["territory"]["clusters"]) >= 1
     assert len(sections["executive"]["alert_feed"]) >= 1
     assert sections["threats"]["cards"][0]["dealer_maps_link"].startswith("https://www.google.com/maps")
@@ -54,6 +54,20 @@ def test_dashboard_sections_have_expected_shape():
     assert sections["threats"]["cards"][0]["observed_name"]
     assert len(sections["threats"]["active_cards"]) == int(sections["executive"]["highlights"][0]["value"])
     assert len(sections["threats"]["filters"]["cities"]) >= 1
+
+
+def test_demo_seed_includes_bogota_public_scan_profiles():
+    repo = InMemoryRepository()
+    repo.seed()
+
+    bogota_dealers = [dealer for dealer in repo.dealers.values() if dealer.city == "Bogotá D.C."]
+    bogota_profiles = [profile for profile in repo.profiles.values() if profile.dealer_id in {dealer.id for dealer in bogota_dealers}]
+    trust = DashboardService(repo).trust_summary()
+
+    assert len(bogota_dealers) == 29
+    assert len(bogota_profiles) == 29
+    assert {profile.monitoring_mode for profile in bogota_profiles} == {MonitoringMode.PUBLIC_SCAN}
+    assert any(group["city"] == "Bogotá D.C." and group["dealer_count"] == 29 for group in trust["groups"])
 
 
 def test_command_alerts_are_sorted_by_risk():
@@ -700,7 +714,8 @@ def test_dashboard_page_renders_territory_story():
     assert response.status_code == 200
     assert '/static/styles.css?v=' in response.text
     assert "Territorio" in response.text
-    assert "Valle de Aburrá" in response.text
+    assert "Red Yamaha Colombia" in response.text
+    assert "Bogotá D.C." in response.text
     assert "Abrir expediente" in response.text
     assert "Barrido público" in response.text
     assert "Estado actual de alertas" in response.text
@@ -884,7 +899,7 @@ def test_dashboard_counts_profiles_when_network_view_is_active():
 
     summary = DashboardService(repo, actor).executive_summary()
 
-    assert summary["headline"]["coverage"] == "3 perfiles protegidos"
+    assert summary["headline"]["coverage"] == "32 perfiles protegidos"
 
 
 def test_google_super_admin_bootstrap():
