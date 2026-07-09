@@ -316,7 +316,7 @@ class DashboardService:
             "archived_count": len(archived_cases),
             "watchlist_count": len(watchlist_cards),
             "filters": {
-                "cities": sorted({card["city"] for card in active_cards}),
+                "cities": self._threat_city_filter_options(active_cards),
                 "statuses": sorted({self._labelize_value(case.status.value) for case in cases}),
                 "priorities": ["Critico", "Alto", "Medio", "Bajo"],
             },
@@ -1016,6 +1016,20 @@ class DashboardService:
                 }
             )
         return cards
+
+    def _threat_city_filter_options(self, active_cards) -> list[str]:
+        active_cities = [card["city"] for card in active_cards if card.get("city")]
+        active_city_set = set(active_cities)
+        monitored_cities = {
+            self._display_city(dealer.city)
+            for profile in self.repository.profiles.values()
+            if profile.enabled
+            for dealer in [self.repository.dealers.get(profile.dealer_id)]
+            if dealer is not None
+        }
+        ordered_active = sorted(active_city_set)
+        ordered_monitored = sorted(city for city in monitored_cities if city not in active_city_set)
+        return [*ordered_active, *ordered_monitored]
 
     @staticmethod
     def _municipality_summary(city: str, active_cases: int, critical_cases: int, risk_index: int) -> str:
