@@ -125,7 +125,8 @@ def test_command_alerts_include_watchlist_cases_in_primary_feed():
     assert {card["case"].id for card in summary["active_cards"]} == {"case-primary-active", "case-watchlist-active"}
     assert len(summary["cards"]) == 1
     assert len(summary["watchlist_cards"]) == 1
-    assert summary["filters"]["cities"] == ["Bello", "Copacabana"]
+    assert summary["filters"]["cities"][:2] == ["Bello", "Copacabana"]
+    assert {"Bogotá D.C.", "Itagüí", "Medellín"}.issubset(summary["filters"]["cities"])
 
 
 def test_legacy_motoblu_itagui_case_resolves_to_motoblu_organization():
