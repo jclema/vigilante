@@ -48,15 +48,18 @@ archived, or reported.
 2. `AGENTS.md`
 3. `ai-specs/docs/product-context.md`
 4. `ai-specs/docs/base-standards.md`
-5. `openspec/specs/product-positioning/spec.md`
-6. `openspec/specs/case-management/spec.md`
-7. `openspec/specs/evidence/spec.md`
-8. `openspec/specs/public-scanning/spec.md`
-9. `openspec/specs/gbp-integration/spec.md`
-10. `openspec/specs/operations/spec.md`
-11. `docs/watchmanhub-production-runbook.md`
-12. `docs/experimental-browser-capture.md`
-13. `docs/gbp-access-matrix-guide.md`
+5. `docs/onboarding/gbp-customer-media-one-pager.md`
+6. `docs/plans/active/gbp-customer-media-access.md`
+7. `openspec/changes/define-gbp-customer-media-access/proposal.md`
+8. `openspec/specs/product-positioning/spec.md`
+9. `openspec/specs/case-management/spec.md`
+10. `openspec/specs/evidence/spec.md`
+11. `openspec/specs/public-scanning/spec.md`
+12. `openspec/specs/gbp-integration/spec.md`
+13. `openspec/specs/operations/spec.md`
+14. `docs/watchmanhub-production-runbook.md`
+15. `docs/experimental-browser-capture.md`
+16. `docs/gbp-access-matrix-guide.md`
 
 ## Local Setup
 

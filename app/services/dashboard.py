@@ -399,8 +399,8 @@ class DashboardService:
             "hotspots": hotspots,
             "clusters": municipality_cards,
             "dealer_cards": self._territory_dealer_cards(hotspots),
-            "headline": "Cómo se distribuye el riesgo en el Valle de Aburrá",
-            "message": "La presión fraudulenta no se reparte igual. Este mapa compara municipios, sedes y puntos en observación para decidir dónde conviene mirar primero.",
+            "headline": "Cómo se distribuye el riesgo en la red Yamaha",
+            "message": "La presión fraudulenta no se reparte igual. Este mapa compara ciudades, sedes y puntos en observación para decidir dónde conviene mirar primero.",
         }
 
     def case_detail(self, case_id: str) -> dict[str, object] | None:
@@ -1056,6 +1056,9 @@ class DashboardService:
             city.strip()
             .replace("Medellin", "Medellín")
             .replace("Itagui", "Itagüí")
+            .replace("Bogota D.C.", "Bogotá D.C.")
+            .replace("Bogotá. D.C.", "Bogotá D.C.")
+            .replace("Bogota", "Bogotá")
         )
 
     def _job_card(self, job):

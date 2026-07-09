@@ -1,0 +1,6 @@
+- [x] Confirm official Incolmotos source and Bogotá filter criteria.
+- [x] Update whitelist importer for city aliases and Bogotá `601` phone normalization.
+- [x] Add official Bogotá dealers and public-scan profiles to demo seed data.
+- [x] Update dashboard city display, copy, and map anchors for Bogotá.
+- [x] Add tests for importer aliases, phone normalization, and seeded Bogotá coverage.
+- [x] Run OpenSpec validation and repository checks.

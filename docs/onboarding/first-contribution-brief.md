@@ -45,6 +45,7 @@ Not allowed:
 
 ## Suggested Files to Inspect
 
+- `docs/onboarding/gbp-customer-media-one-pager.md`
 - `docs/plans/active/gbp-customer-media-access.md`
 - `openspec/changes/define-gbp-customer-media-access/`
 - `openspec/specs/gbp-integration/spec.md`
