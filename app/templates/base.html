@@ -30,7 +30,9 @@
         {% if current_actor.organizations|length > 1 or current_actor.can_view_network %}
         <a href="/select-organization">Cambiar</a>
         {% endif %}
+        {% if current_actor.can_view_sensitive_settings %}
         <a href="/settings">Configurar</a>
+        {% endif %}
         <form method="post" action="/auth/logout">
           <button type="submit">Salir</button>
         </form>

@@ -226,6 +226,11 @@ def test_backfill_customer_media_returns_clear_403_when_google_forbids_access():
     main_module.customer_media_ingest_service = lambda: ForbiddenService()
     try:
         client = TestClient(app)
+        app_repository.seed()
+        client.post(
+            "/auth/login",
+            data={"email": "operator@vigilante.local", "password": "change-me"},
+        )
         response = client.post(
             "/api/gbp/customer-media/backfill",
             json={"profile_ids": ["profile-bello"], "limit": 5},
@@ -257,6 +262,10 @@ def test_evidence_image_route_serves_file(tmp_path: Path):
     app_repository.save_evidence(artifact)
 
     client = TestClient(app)
+    client.post(
+        "/auth/login",
+        data={"email": "operator@vigilante.local", "password": "change-me"},
+    )
     response = client.get("/api/evidence/evidence-image-test/image")
 
     assert response.status_code == 200

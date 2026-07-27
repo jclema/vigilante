@@ -94,6 +94,10 @@ class ActorContext:
         return UserRole.YAMAHA_ADMIN in self.roles
 
     @property
+    def is_developer_viewer(self) -> bool:
+        return UserRole.DEVELOPER_VIEWER in self.roles
+
+    @property
     def is_dealer_admin(self) -> bool:
         return UserRole.DEALER_ADMIN in self.roles
 
@@ -103,7 +107,15 @@ class ActorContext:
 
     @property
     def can_view_network(self) -> bool:
-        return self.is_super_admin or self.is_yamaha_admin
+        return self.is_super_admin or self.is_yamaha_admin or self.is_developer_viewer
+
+    @property
+    def can_mutate_product(self) -> bool:
+        return not self.is_developer_viewer
+
+    @property
+    def can_view_sensitive_settings(self) -> bool:
+        return not self.is_developer_viewer
 
     def visible_organization_ids(self) -> set[str] | None:
         if self.can_view_network and not self.active_organization_id:
@@ -251,6 +263,50 @@ class AuthService:
             )
         setattr(user, "_temporary_password", generated_password)
         return user
+
+    def provision_developer_viewer(self, *, email: str, full_name: str) -> tuple[User, Membership, bool]:
+        normalized_email = email.strip().lower()
+        if not normalized_email or "@" not in normalized_email:
+            raise ValueError("Correo inválido")
+        normalized_name = full_name.strip()
+        if not normalized_name:
+            raise ValueError("Nombre requerido")
+        platform = self.repository.get_organization("org-platform")
+        if not platform:
+            platform = self.repository.save_organization(
+                Organization(
+                    id="org-platform",
+                    name="Vigilante Platform",
+                    organization_type="platform",
+                )
+            )
+        user = self.repository.find_user_by_email(normalized_email)
+        if not user:
+            user = User(
+                id=self.repository.next_id("user"),
+                email=normalized_email,
+                full_name=normalized_name,
+            )
+        else:
+            user.full_name = normalized_name
+            user.is_active = True
+        self.repository.save_user(user)
+        memberships = self.repository.list_memberships_for_user(user.id)
+        existing = next(
+            (item for item in memberships if item.role == UserRole.DEVELOPER_VIEWER),
+            None,
+        )
+        if existing:
+            return user, existing, False
+        membership = self.repository.save_membership(
+            Membership(
+                id=self.repository.next_id("membership"),
+                user_id=user.id,
+                organization_id=platform.id,
+                role=UserRole.DEVELOPER_VIEWER,
+            )
+        )
+        return user, membership, True
 
     def google_oauth_authorize_url(
         self,

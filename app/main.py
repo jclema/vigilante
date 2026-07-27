@@ -338,6 +338,36 @@ def _require_org_management(actor, organization_id: str) -> None:
     raise HTTPException(status_code=403, detail="Solo un admin autorizado puede gestionar esta organización")
 
 
+def _require_product_mutation(request: Request):
+    actor = _require_actor(request)
+    if not actor.can_mutate_product:
+        raise HTTPException(status_code=403, detail="Este perfil tiene acceso de solo lectura")
+    return actor
+
+
+def _require_sensitive_settings(request: Request):
+    actor = _require_actor(request)
+    if not actor.can_view_sensitive_settings:
+        raise HTTPException(status_code=403, detail="Este perfil no puede acceder a configuración sensible")
+    return actor
+
+
+def _deny_read_only_actor_if_present(request: Request) -> None:
+    actor = auth_service().current_actor(request)
+    if actor and not actor.can_mutate_product:
+        raise HTTPException(status_code=403, detail="Este perfil tiene acceso de solo lectura")
+
+
+def _require_case_access(actor, case) -> None:
+    organization_id = resolve_case_organization_id(case, repository.dealers)
+    if organization_id:
+        _require_org_access(actor, organization_id)
+        return
+    if actor.can_view_network:
+        return
+    raise HTTPException(status_code=403, detail="No tienes permisos sobre este caso")
+
+
 def _normalized_terms(value: str) -> list[str]:
     return [term for term in re.split(r"[^a-z0-9]+", value.lower()) if len(term) >= 4]
 
@@ -640,9 +670,7 @@ async def select_organization_page(request: Request) -> HTMLResponse:
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request) -> HTMLResponse:
-    actor, redirect = _require_actor_page(request)
-    if redirect:
-        return redirect
+    actor = _require_sensitive_settings(request)
 
     organizations = repository.list_organizations()
     visible_org_ids = None if actor.can_view_network else actor.visible_organization_ids()
@@ -1083,7 +1111,7 @@ async def api_me(request: Request):
 
 @app.post("/api/organizations")
 async def create_organization(request: Request, payload: OrganizationCreatePayload):
-    actor = _require_actor(request)
+    actor = _require_product_mutation(request)
     if not actor.can_manage_platform:
         raise HTTPException(status_code=403, detail="Solo super admin puede crear organizaciones por API")
     organization = repository.save_organization(
@@ -1098,7 +1126,7 @@ async def create_organization(request: Request, payload: OrganizationCreatePaylo
 
 @app.post("/api/organizations/{organization_id}/invite")
 async def invite_user(request: Request, organization_id: str, payload: InviteUserPayload):
-    actor = _require_actor(request)
+    actor = _require_product_mutation(request)
     _require_org_management(actor, organization_id)
     user = auth_service().invite_user(
         organization_id=organization_id,
@@ -1458,13 +1486,16 @@ async def import_profiles(request: Request, payload: ProfileImportRequest):
 
 @app.post("/api/scans/run")
 async def run_scan(request: Request, payload: ScanRequest):
-    _require_actor_or_scheduler(request, scheduler_job_name="vigilante-public-scan-hourly")
+    actor = _require_actor_or_scheduler(request, scheduler_job_name="vigilante-public-scan-hourly")
+    if actor and not actor.can_mutate_product:
+        raise HTTPException(status_code=403, detail="Este perfil tiene acceso de solo lectura")
     scan = scout_agent().run_public_scan(payload.query, places_search_service.search_clone_candidates(payload.query))
     return {"scan": scan, "cases": dashboard_service(request).repository.list_cases()}
 
 
 @app.post("/api/webhooks/gbp")
-async def gbp_webhook(payload: GbpWebhookPayload):
+async def gbp_webhook(request: Request, payload: GbpWebhookPayload):
+    _deny_read_only_actor_if_present(request)
     if payload.source_type not in {"review_photo", "official_profile_update"}:
         raise HTTPException(status_code=400, detail="source_type invalido")
     case = scout_agent().process_gbp_event(
@@ -1491,6 +1522,7 @@ async def gbp_webhook(payload: GbpWebhookPayload):
 
 @app.post("/api/webhooks/gbp/customer-media")
 async def gbp_customer_media_webhook(request: Request):
+    _deny_read_only_actor_if_present(request)
     payload = await request.json()
     try:
         result = customer_media_ingest_service().sync_push_payload(payload)
@@ -1500,7 +1532,8 @@ async def gbp_customer_media_webhook(request: Request):
 
 
 @app.post("/api/gbp/customer-media/backfill")
-async def backfill_customer_media(payload: CustomerMediaBackfillRequest):
+async def backfill_customer_media(request: Request, payload: CustomerMediaBackfillRequest):
+    _require_product_mutation(request)
     try:
         return customer_media_ingest_service().sync_profiles(payload.profile_ids, limit=payload.limit)
     except ValueError as exc:
@@ -1527,7 +1560,7 @@ async def backfill_customer_media(payload: CustomerMediaBackfillRequest):
 
 @app.post("/api/evidence/review-photo")
 async def ingest_review_photo(request: Request, payload: EvidenceIngestPayload):
-    _require_actor(request)
+    _require_product_mutation(request)
     if payload.source_type not in {"review_photo", "official_profile_update"}:
         raise HTTPException(status_code=400, detail="source_type invalido")
     try:
@@ -1575,9 +1608,24 @@ async def get_case(request: Request, case_id: str):
 
 
 @app.get("/api/evidence/image")
-async def get_evidence_image(path: str):
+async def get_evidence_image(request: Request, path: str):
+    actor = _require_actor(request)
     if not path:
         raise HTTPException(status_code=404, detail="La evidencia no tiene imagen capturada")
+    artifact = next(
+        (
+            candidate
+            for candidate in repository.evidence.values()
+            if (candidate.content or {}).get("evidence_image_path") == path
+        ),
+        None,
+    )
+    if not artifact:
+        raise HTTPException(status_code=404, detail="Evidencia no encontrada")
+    case = repository.get_case(artifact.case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
     try:
         payload, content_type = evidence_media_service().load_image(str(path))
     except FileNotFoundError as exc:
@@ -1586,22 +1634,32 @@ async def get_evidence_image(path: str):
 
 
 @app.get("/api/evidence/{artifact_id}/image")
-async def get_evidence_image_by_artifact(artifact_id: str):
+async def get_evidence_image_by_artifact(request: Request, artifact_id: str):
+    actor = _require_actor(request)
     artifact = repository.evidence.get(artifact_id)
     if not artifact:
         raise HTTPException(status_code=404, detail="Evidencia no encontrada")
     storage_path = (artifact.content or {}).get("evidence_image_path")
     if not storage_path:
         raise HTTPException(status_code=404, detail="La evidencia no tiene imagen capturada")
-    return await get_evidence_image(str(storage_path))
+    case = repository.get_case(artifact.case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
+    try:
+        payload, content_type = evidence_media_service().load_image(str(storage_path))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="No fue posible abrir la imagen de evidencia") from exc
+    return Response(content=payload, media_type=content_type)
 
 
 @app.post("/api/cases/{case_id}/status")
 async def update_case_status(request: Request, case_id: str, payload: StatusUpdateRequest):
-    _require_actor(request)
+    actor = _require_product_mutation(request)
     case = repository.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
     previous_status = case.status
     case.status = payload.status
     repository.save_case(case)
@@ -1615,10 +1673,11 @@ async def update_case_status(request: Request, case_id: str, payload: StatusUpda
 
 @app.post("/api/cases/{case_id}/generate-report")
 async def generate_case_report(request: Request, case_id: str):
-    _require_actor(request)
+    actor = _require_product_mutation(request)
     case = repository.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
     report = reporter_agent().generate_report(case)
     case.status = CaseStatus.REPORTED if case.status == CaseStatus.CONFIRMED else case.status
     repository.save_case(case)
@@ -1636,10 +1695,11 @@ async def get_case_browser_enforcement(request: Request, case_id: str):
 
 @app.post("/api/cases/{case_id}/browser-enforcement/prepare")
 async def prepare_case_browser_enforcement(request: Request, case_id: str):
-    _require_actor(request)
+    actor = _require_product_mutation(request)
     case = repository.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
     try:
         run = browser_enforcement_service().prepare_case(case_id)
     except ValueError as exc:
@@ -1649,10 +1709,11 @@ async def prepare_case_browser_enforcement(request: Request, case_id: str):
 
 @app.post("/api/cases/{case_id}/browser-enforcement/approve")
 async def approve_case_browser_enforcement(request: Request, case_id: str):
-    _require_actor(request)
+    actor = _require_product_mutation(request)
     case = repository.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
     try:
         run = browser_enforcement_service().approve_case(case_id)
     except ValueError as exc:
@@ -1662,10 +1723,11 @@ async def approve_case_browser_enforcement(request: Request, case_id: str):
 
 @app.post("/api/cases/{case_id}/browser-enforcement/submit")
 async def submit_case_browser_enforcement(request: Request, case_id: str):
-    _require_actor(request)
+    actor = _require_product_mutation(request)
     case = repository.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
     try:
         run = browser_enforcement_service().submit_case(case_id, execution_mode=BrowserExecutionMode.SEMI_AUTO_SUBMIT)
     except ValueError as exc:
@@ -1675,10 +1737,11 @@ async def submit_case_browser_enforcement(request: Request, case_id: str):
 
 @app.post("/api/cases/{case_id}/browser-enforcement/run-auto")
 async def run_case_browser_enforcement_auto(request: Request, case_id: str):
-    _require_actor(request)
+    actor = _require_product_mutation(request)
     case = repository.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
     try:
         run = browser_enforcement_service().run_auto(case_id)
     except ValueError as exc:
@@ -1688,7 +1751,7 @@ async def run_case_browser_enforcement_auto(request: Request, case_id: str):
 
 @app.post("/cases/{case_id}/browser-enforcement/submit")
 async def submit_case_browser_enforcement_page(request: Request, case_id: str):
-    actor = _require_actor(request)
+    actor = _require_product_mutation(request)
     case = repository.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
@@ -1720,7 +1783,7 @@ async def get_browser_run(request: Request, run_id: str):
 
 @app.post("/api/browser-sessions/{organization_id}/refresh")
 async def refresh_browser_session(request: Request, organization_id: str, payload: BrowserSessionRefreshRequest):
-    actor = _require_actor(request)
+    actor = _require_product_mutation(request)
     _require_org_management(actor, organization_id)
     auth_user_email = payload.auth_user_email or actor.user.email
     session = browser_enforcement_service().refresh_session(
@@ -1762,9 +1825,11 @@ async def update_case_status_form(
     status: CaseStatus = Form(...),
     next_path: str | None = Form(default=None),
 ):
+    actor = _require_product_mutation(request)
     case = repository.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
+    _require_case_access(actor, case)
     previous_status = case.status
     case.status = status
     repository.save_case(case)
