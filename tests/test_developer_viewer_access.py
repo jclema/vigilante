@@ -38,6 +38,14 @@ def test_developer_viewer_has_network_read_access_without_settings():
     assert 'href="/settings"' not in dashboard.text
 
 
+def test_settings_keeps_redirecting_unauthenticated_users_to_login():
+    with TestClient(app) as client:
+        response = client.get("/settings", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+
+
 def test_developer_viewer_cannot_change_case_status():
     with TestClient(app) as client:
         _login_developer_viewer(client)

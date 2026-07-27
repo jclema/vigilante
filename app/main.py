@@ -670,6 +670,9 @@ async def select_organization_page(request: Request) -> HTMLResponse:
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request) -> HTMLResponse:
+    actor, redirect = _require_actor_page(request)
+    if redirect:
+        return redirect
     actor = _require_sensitive_settings(request)
 
     organizations = repository.list_organizations()
