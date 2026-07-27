@@ -88,6 +88,7 @@ class OrganizationType(str, Enum):
 class UserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
     YAMAHA_ADMIN = "yamaha_admin"
+    DEVELOPER_VIEWER = "developer_viewer"
     DEALER_ADMIN = "dealer_admin"
     DEALER_MEMBER = "dealer_member"
 

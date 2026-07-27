@@ -343,7 +343,7 @@
               </div>
             </div>
             {% endif %}
-            {% if detail.browser_panel.show_submit_action %}
+            {% if current_actor.can_mutate_product and detail.browser_panel.show_submit_action %}
             <form method="post" action="/cases/{{ detail.case.id }}/browser-enforcement/submit" class="browser-submit-form">
               <button type="submit" {% if not detail.browser_panel.manual_submit_ready %}disabled{% endif %}>
                 {% if detail.browser_panel.manual_submit_ready %}
@@ -364,6 +364,7 @@
             <p class="action-form-help">Para ejecutar la denuncia aquí primero necesitamos detectar un target denunciable claro dentro de la evidencia del caso.</p>
             {% endif %}
           </article>
+          {% if current_actor.can_mutate_product %}
           <form class="action-form" method="post" action="/cases/{{ detail.case.id }}/status">
             <label for="status">{{ detail.follow_up_form.label }}</label>
             <p class="action-form-help">{{ detail.follow_up_form.help }}</p>
@@ -377,6 +378,9 @@
             </select>
             <button type="submit">{{ detail.follow_up_form.submit_label }}</button>
           </form>
+          {% else %}
+          <p class="action-form-help">Perfil de solo lectura. Las acciones operativas están deshabilitadas.</p>
+          {% endif %}
         </div>
         <div class="follow-up-disclosures">
           {% if detail.browser_panel.latest_run or detail.browser_panel.runs %}

@@ -1,5 +1,37 @@
 # WatchmanHub production runbook
 
+## Developer viewer access
+
+Developer collaborators who need to understand the production product use the
+application-level `developer_viewer` role. This role is network-wide and
+read-only. It does not grant Google Cloud, Firestore console, Secret Manager,
+Cloudflare, deployment, integration administration, reporting, or enforcement
+permissions.
+
+Run the provisioning command first without `--apply`, then repeat it with
+`--apply` only after the revision containing the role has been deployed:
+
+```bash
+STORAGE_BACKEND=firestore GOOGLE_CLOUD_PROJECT=vigilante-pilot \
+  python -m scripts.provision_developer_viewer \
+  --full-name "Trystan Jaquet" \
+  --email "trystan.jaquet@gmail.com"
+
+STORAGE_BACKEND=firestore GOOGLE_CLOUD_PROJECT=vigilante-pilot \
+  python -m scripts.provision_developer_viewer \
+  --full-name "Trystan Jaquet" \
+  --email "trystan.jaquet@gmail.com" \
+  --apply
+```
+
+The user signs in through Google at `https://www.watchmanhub.com`. Verify
+network dashboards and case reads, confirm `/settings` returns `403`, and
+confirm representative POST requests return `403` without side effects.
+
+Revocation is performed by deactivating the user or removing the
+`developer_viewer` membership. No secret rotation is required because this
+access path does not issue a password, service account, or application secret.
+
 ## Public service
 
 - URL: `https://www.watchmanhub.com`
