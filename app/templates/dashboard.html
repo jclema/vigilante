@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-{% set spotlight = sections.threats.cards[0] if sections.threats.cards else None %}
+{% set spotlight = sections.threats.active_cards[0] if sections.threats.active_cards else None %}
 <div class="shell">
   <aside class="sidebar">
     <div class="brand">
@@ -159,6 +159,11 @@
             {% endif %}
             {% endfor %}
           </div>
+          <div class="command-alert-empty" data-command-alert-empty role="status" {% if sections.threats.active_cards %}hidden{% endif %}>
+            <span aria-hidden="true">✓</span>
+            <strong>Sin alertas para estos filtros</strong>
+            <p>Ajusta los filtros o continúa supervisando la red.</p>
+          </div>
           <nav class="command-pagination" data-command-pagination aria-label="Páginas de alertas activas">
             <button type="button" data-command-page-prev aria-label="Ver alertas anteriores">Anterior</button>
             <span data-command-page-status aria-live="polite">Página 1</span>
@@ -174,14 +179,14 @@
             </div>
             <div class="command-map-mode"><span data-command-map-mode>Solo alertas</span></div>
           </div>
-          <div class="command-cartography">
-            <img src="/static/medellin-atlas-login.webp" alt="" aria-hidden="true" />
+          <div class="command-cartography" data-command-cartography>
+            <img src="/static/medellin-atlas-login.webp" alt="" aria-hidden="true" data-command-map-atlas />
             <span class="command-map-city command-map-city--bello">Bello</span>
             <span class="command-map-city command-map-city--medellin">Medellín</span>
             <span class="command-map-city command-map-city--bogota">Bogotá D.C.</span>
             <span class="command-map-city command-map-city--itagui">Itagüí</span>
             <span class="command-map-city command-map-city--envigado">Envigado</span>
-            {% for card in sections.threats.cards %}
+            {% for card in sections.threats.active_cards %}
             {% if card.case.status != 'dismissed' %}
             <button
               type="button"
@@ -193,6 +198,11 @@
             ><span></span></button>
             {% endif %}
             {% endfor %}
+            <div class="command-map-empty" data-command-map-empty role="status" hidden>
+              <span aria-hidden="true">⌖</span>
+              <strong data-command-map-empty-title>Sin alertas en el mapa</strong>
+              <p data-command-map-empty-body>La vista se actualizará con los filtros activos.</p>
+            </div>
           </div>
           <div class="command-map-legend">
             <span><i class="is-critical"></i> Riesgo crítico</span>
@@ -201,48 +211,53 @@
           </div>
         </section>
 
-        {% if spotlight %}
         <aside class="command-selected" data-command-selected>
-          <div class="command-panel-head">
-            <div>
-              <span class="panel-kicker">Caso seleccionado</span>
-              <h2 data-command-selected-id>{{ spotlight.case.id }}</h2>
+          <div class="command-selected-content" data-command-selected-content {% if not spotlight %}hidden{% endif %}>
+            <div class="command-panel-head">
+              <div>
+                <span class="panel-kicker">Caso seleccionado</span>
+                <h2 data-command-selected-id>{% if spotlight %}{{ spotlight.case.id }}{% endif %}</h2>
+              </div>
+              <span class="command-selected-type" data-command-selected-source>{% if spotlight %}{{ spotlight.source_label }}{% endif %}</span>
             </div>
-            <span class="command-selected-type" data-command-selected-source>{{ spotlight.source_label }}</span>
-          </div>
-          <div class="command-selected-identity">
-            <div class="command-selected-media" data-command-selected-media>
-              {% if spotlight.media %}
-              <img src="{{ spotlight.media.url }}" alt="{{ spotlight.media.caption }}" />
-              {% else %}
-              <span aria-hidden="true">🛡️</span>
-              {% endif %}
+            <div class="command-selected-identity">
+              <div class="command-selected-media" data-command-selected-media>
+                {% if spotlight and spotlight.media %}
+                <img src="{{ spotlight.media.url }}" alt="{{ spotlight.media.caption }}" />
+                {% else %}
+                <span aria-hidden="true">🛡️</span>
+                {% endif %}
+              </div>
+              <div>
+                <h3 data-command-selected-dealer>{% if spotlight %}{{ spotlight.case.dealer_name }}{% endif %}</h3>
+                <p data-command-selected-title>{% if spotlight %}{{ spotlight.case.title }}{% endif %}</p>
+                <small data-command-selected-city>{% if spotlight %}{{ spotlight.city }} · {{ spotlight.identified_at }}{% endif %}</small>
+                {% if spotlight and spotlight.maps_link %}
+                <a href="{{ spotlight.maps_link }}" data-command-selected-maps>Ver en Google Maps ↗</a>
+                {% else %}
+                <a href="#" data-command-selected-maps hidden>Ver en Google Maps ↗</a>
+                {% endif %}
+              </div>
             </div>
-            <div>
-              <h3 data-command-selected-dealer>{{ spotlight.case.dealer_name }}</h3>
-              <p data-command-selected-title>{{ spotlight.case.title }}</p>
-              <small data-command-selected-city>{{ spotlight.city }} · {{ spotlight.identified_at }}</small>
-              {% if spotlight.maps_link %}
-              <a href="{{ spotlight.maps_link }}" data-command-selected-maps>Ver en Google Maps ↗</a>
-              {% else %}
-              <a href="#" data-command-selected-maps hidden>Ver en Google Maps ↗</a>
-              {% endif %}
+            <div class="command-confidence">
+              <div>
+                <span>Confianza del sistema</span>
+                <strong data-command-selected-risk>{% if spotlight %}{{ spotlight.case.risk_score }}%{% endif %}</strong>
+              </div>
+              <div class="command-confidence-track"><span data-command-selected-risk-bar style="width: {% if spotlight %}{{ spotlight.case.risk_score }}{% else %}0{% endif %}%"></span></div>
             </div>
-          </div>
-          <div class="command-confidence">
-            <div>
-              <span>Confianza del sistema</span>
-              <strong data-command-selected-risk>{{ spotlight.case.risk_score }}%</strong>
+            <div class="command-next-action">
+              <span>Siguiente acción</span>
+              <strong data-command-selected-action>{% if spotlight %}{{ spotlight.recommended_action }}{% endif %}</strong>
             </div>
-            <div class="command-confidence-track"><span data-command-selected-risk-bar style="width: {{ spotlight.case.risk_score }}%"></span></div>
+            <a class="command-open-case" href="{% if spotlight %}/cases/{{ spotlight.case.id }}{% else %}#{% endif %}" data-command-selected-href>Abrir expediente</a>
           </div>
-          <div class="command-next-action">
-            <span>Siguiente acción</span>
-            <strong data-command-selected-action>{{ spotlight.recommended_action }}</strong>
+          <div class="command-selected-empty" data-command-selected-empty role="status" {% if spotlight %}hidden{% endif %}>
+            <span aria-hidden="true">✓</span>
+            <strong>Ningún caso coincide</strong>
+            <p>El caso anterior se retiró porque ya no pertenece a los filtros activos.</p>
           </div>
-          <a class="command-open-case" href="/cases/{{ spotlight.case.id }}" data-command-selected-href>Abrir expediente</a>
         </aside>
-        {% endif %}
       </div>
     </section>
 
@@ -702,6 +717,14 @@
     const commandPageStatus = document.querySelector("[data-command-page-status]");
     const commandMarkers = Array.from(document.querySelectorAll("[data-command-map-marker]"));
     const commandMapMode = document.querySelector("[data-command-map-mode]");
+    const commandAlertEmpty = document.querySelector("[data-command-alert-empty]");
+    const commandCartography = document.querySelector("[data-command-cartography]");
+    const commandMapAtlas = document.querySelector("[data-command-map-atlas]");
+    const commandMapEmpty = document.querySelector("[data-command-map-empty]");
+    const commandMapEmptyTitle = document.querySelector("[data-command-map-empty-title]");
+    const commandMapEmptyBody = document.querySelector("[data-command-map-empty-body]");
+    const commandSelectedContent = document.querySelector("[data-command-selected-content]");
+    const commandSelectedEmpty = document.querySelector("[data-command-selected-empty]");
     const commandSelectedId = document.querySelector("[data-command-selected-id]");
     const commandSelectedSource = document.querySelector("[data-command-selected-source]");
     const commandSelectedDealer = document.querySelector("[data-command-selected-dealer]");
@@ -714,6 +737,7 @@
     const commandSelectedAction = document.querySelector("[data-command-selected-action]");
     const commandSelectedHref = document.querySelector("[data-command-selected-href]");
     const commandPageSize = 6;
+    const commandAtlasCities = new Set(["bello", "medellin", "itagui", "envigado", "sabaneta"]);
     let commandPage = 1;
     let commandFilteredTotal = commandAlerts.length;
 
@@ -784,20 +808,17 @@
         const visibleCount = Math.min(commandPageSize, Math.max(0, commandFilteredTotal - pageStart));
         commandMapMode.textContent = `${visibleCount} alerta${visibleCount === 1 ? "" : "s"} en mapa`;
       }
-      return { pageStart, pageEnd: Math.min(pageEnd, commandFilteredTotal) };
+      return { pageStart, pageEnd: Math.min(pageEnd, commandFilteredTotal), visibleAlerts };
     };
 
     const changeCommandPage = (direction) => {
       commandPage += direction;
-      renderCommandPage();
-      selectCommandCase(commandAlerts.find((row) => !row.hidden));
-      threatList?.scrollTo({ top: 0, behavior: "smooth" });
       applyFilters({ preservePage: true });
+      threatList?.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     const selectCommandCase = (row) => {
-      if (!row) return;
-      const caseId = row.dataset.caseId;
+      const caseId = row?.dataset.caseId || null;
       commandAlerts.forEach((item) => {
         const selected = item === row;
         item.classList.toggle("is-selected", selected);
@@ -806,6 +827,25 @@
       commandMarkers.forEach((marker) => {
         marker.classList.toggle("is-selected", marker.dataset.commandCaseId === caseId);
       });
+      if (commandSelectedContent) commandSelectedContent.hidden = !row;
+      if (commandSelectedEmpty) commandSelectedEmpty.hidden = Boolean(row);
+      if (!row) {
+        if (commandSelectedId) commandSelectedId.textContent = "";
+        if (commandSelectedSource) commandSelectedSource.textContent = "";
+        if (commandSelectedDealer) commandSelectedDealer.textContent = "";
+        if (commandSelectedTitle) commandSelectedTitle.textContent = "";
+        if (commandSelectedCity) commandSelectedCity.textContent = "";
+        if (commandSelectedRisk) commandSelectedRisk.textContent = "";
+        if (commandSelectedRiskBar) commandSelectedRiskBar.style.width = "0";
+        if (commandSelectedAction) commandSelectedAction.textContent = "";
+        if (commandSelectedMedia) commandSelectedMedia.replaceChildren();
+        if (commandSelectedMaps) {
+          commandSelectedMaps.hidden = true;
+          commandSelectedMaps.removeAttribute("href");
+        }
+        if (commandSelectedHref) commandSelectedHref.removeAttribute("href");
+        return;
+      }
       if (commandSelectedId) commandSelectedId.textContent = caseId;
       if (commandSelectedSource) commandSelectedSource.textContent = row.dataset.source;
       if (commandSelectedDealer) commandSelectedDealer.textContent = row.dataset.dealer;
@@ -832,6 +872,48 @@
           fallback.textContent = row.dataset.sourceTone === "clone" ? "📍" : "🛡️";
           commandSelectedMedia.append(fallback);
         }
+      }
+    };
+
+    const reconcileCommandState = (visibleAlerts) => {
+      if (commandAlertEmpty) commandAlertEmpty.hidden = visibleAlerts.length > 0;
+      const selectedAlert = visibleAlerts.find((row) => row.classList.contains("is-selected"));
+      if (selectedAlert) {
+        selectCommandCase(selectedAlert);
+        return;
+      }
+      if (visibleAlerts.length) {
+        selectCommandCase(visibleAlerts[0]);
+        return;
+      }
+      selectCommandCase(null);
+    };
+
+    const updateCommandMapContext = (visibleAlerts, city) => {
+      const normalizedCity = normalizeFilterValue(city);
+      const supportsAtlas = city === "all" || commandAtlasCities.has(normalizedCity);
+      const hasVisibleAlerts = visibleAlerts.length > 0;
+      if (commandCartography) commandCartography.classList.toggle("is-context-only", !supportsAtlas);
+      if (commandMapAtlas) commandMapAtlas.hidden = !supportsAtlas;
+      commandMarkers.forEach((marker) => {
+        if (!supportsAtlas) marker.hidden = true;
+      });
+      if (commandMapEmpty) commandMapEmpty.hidden = hasVisibleAlerts && supportsAtlas;
+      if (!commandMapEmptyTitle || !commandMapEmptyBody) return;
+      if (!supportsAtlas) {
+        commandMapEmptyTitle.textContent = city;
+        commandMapEmptyBody.textContent = hasVisibleAlerts
+          ? `${visibleAlerts.length} alerta${visibleAlerts.length === 1 ? "" : "s"} coincide${visibleAlerts.length === 1 ? "" : "n"}. La ubicación geográfica llegará con el nuevo mapa.`
+          : `No hay alertas activas en ${city} con estos filtros. El atlas de Medellín se oculta para no comunicar una ubicación incorrecta.`;
+        if (commandMapMode) commandMapMode.textContent = `${visibleAlerts.length} alerta${visibleAlerts.length === 1 ? "" : "s"} · ${city}`;
+        return;
+      }
+      if (!hasVisibleAlerts) {
+        commandMapEmptyTitle.textContent = city === "all" ? "Sin alertas para estos filtros" : `Sin alertas en ${city}`;
+        commandMapEmptyBody.textContent = "La cobertura permanece activa. Ajusta los filtros para revisar otros casos.";
+      }
+      if (city === "all" && commandMapMode) {
+        commandMapMode.textContent = `Vista operativa temporal · ${visibleAlerts.length} alerta${visibleAlerts.length === 1 ? "" : "s"}`;
       }
     };
 
@@ -877,7 +959,7 @@
 
     const params = new URLSearchParams(window.location.search);
 
-    if (!rows.length || !citySelect || !statusSelect || !prioritySelect) return;
+    if (!citySelect || !statusSelect || !prioritySelect) return;
 
     if (params.has("city")) setSelectValueFromParam(citySelect, params.get("city"));
     if (params.has("status")) statusSelect.value = params.get("status");
@@ -1040,6 +1122,8 @@
         if (!row.hasAttribute("data-command-alert")) row.hidden = !isVisible;
       });
       const pageRange = renderCommandPage();
+      updateCommandMapContext(pageRange.visibleAlerts, city);
+      reconcileCommandState(pageRange.visibleAlerts);
 
       territoryCards.forEach((card) => {
         const matchesCity = matchesCityFilter(card.dataset.city, city);
@@ -1076,11 +1160,6 @@
         filterSummary.textContent = segments.length
           ? `Mostrando ${range} amenaza${commandFilteredTotal === 1 ? "" : "s"} · ${segments.join(" · ")}.`
           : `Mostrando ${range} amenaza${commandFilteredTotal === 1 ? "" : "s"} activas en toda la red.`;
-      }
-
-      const selectedCommandAlert = commandAlerts.find((row) => row.classList.contains("is-selected"));
-      if (!selectedCommandAlert || selectedCommandAlert.hidden) {
-        selectCommandCase(commandAlerts.find((row) => !row.hidden));
       }
 
       if (scrollToThreat && threatList) {

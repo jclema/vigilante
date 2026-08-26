@@ -6879,6 +6879,51 @@ button:hover {
   overflow-y: auto;
 }
 
+.command-alert-empty,
+.command-selected-empty {
+  flex: 1;
+  min-height: 220px;
+  padding: 28px 22px;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.command-alert-empty[hidden],
+.command-selected-empty[hidden],
+.command-selected-content[hidden] {
+  display: none;
+}
+
+.command-alert-empty > span,
+.command-selected-empty > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: var(--success);
+  font-weight: 900;
+  border-radius: 50%;
+  background: rgba(45, 122, 88, 0.1);
+}
+
+.command-alert-empty strong,
+.command-selected-empty strong {
+  color: var(--accent-deep);
+  font-size: 0.92rem;
+}
+
+.command-alert-empty p,
+.command-selected-empty p {
+  max-width: 30ch;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .command-alert-row {
   position: relative;
   width: 100%;
@@ -7075,6 +7120,12 @@ button:hover {
   overflow: hidden;
 }
 
+.command-cartography.is-context-only {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(15, 47, 103, 0.08), transparent 34%),
+    linear-gradient(145deg, #f4f1e9, #e8edf4);
+}
+
 .command-cartography::after {
   content: "";
   position: absolute;
@@ -7091,6 +7142,53 @@ button:hover {
   object-fit: cover;
   object-position: 53% 50%;
   filter: saturate(0.82) contrast(0.96);
+}
+
+.command-cartography > img[hidden],
+.command-cartography.is-context-only .command-map-city {
+  display: none;
+}
+
+.command-map-empty {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  padding: 32px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--muted);
+  background: rgba(248, 245, 239, 0.84);
+}
+
+.command-map-empty[hidden] {
+  display: none;
+}
+
+.command-map-empty > span {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-deep);
+  font-size: 1.4rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.command-map-empty strong {
+  color: var(--accent-deep);
+  font-size: 1.05rem;
+}
+
+.command-map-empty p {
+  max-width: 42ch;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
 }
 
 .command-map-city {
@@ -7203,6 +7301,10 @@ button:hover {
 
 .command-selected .command-panel-head {
   margin-inline: -16px;
+}
+
+.command-selected-content {
+  display: contents;
 }
 
 .command-selected-type {
