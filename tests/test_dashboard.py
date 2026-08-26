@@ -751,6 +751,30 @@ def test_command_city_filter_is_accent_insensitive():
     assert "row.dataset.city === city" not in template
 
 
+def test_command_center_reconciles_filtered_page_and_clears_stale_selection():
+    template = (Path(__file__).parents[1] / "app" / "templates" / "dashboard.html").read_text()
+
+    assert "data-command-alert-empty" in template
+    assert "data-command-map-empty" in template
+    assert "data-command-selected-content" in template
+    assert "data-command-selected-empty" in template
+    assert "const reconcileCommandState = (visibleAlerts)" in template
+    assert "selectCommandCase(null);" in template
+    assert 'if (commandSelectedId) commandSelectedId.textContent = "";' in template
+    assert "return { pageStart, pageEnd: Math.min(pageEnd, commandFilteredTotal), visibleAlerts };" in template
+    assert "reconcileCommandState(pageRange.visibleAlerts);" in template
+
+
+def test_command_center_hides_unsupported_static_atlas_context():
+    template = (Path(__file__).parents[1] / "app" / "templates" / "dashboard.html").read_text()
+
+    assert "data-command-cartography" in template
+    assert "data-command-map-atlas" in template
+    assert "const commandAtlasCities" in template
+    assert "commandCartography.classList.toggle(\"is-context-only\", !supportsAtlas);" in template
+    assert "Vista operativa temporal" in template
+
+
 def test_api_me_and_dealer_scope():
     repo = app_repository
     repo.seed()
